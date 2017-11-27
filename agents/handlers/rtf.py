@@ -4,6 +4,7 @@
 """
 import os.path
 import re
+import hashlib
 
 from oletools import rtfobj, oleobj
 from ..core.yarascan import *
@@ -13,7 +14,7 @@ class rtf():
 
     output = []
     obj_sig_len = 4
-    output_format = ["filename", "obj_offset", "ole_type", "ole_size", "obj_sig", "ole_regex_strings", "ole_strings"]
+    output_format = ["filename", "obj_offset", "ole_type", "ole_size", "obj_sig", "ole_regex_strings", "ole_strings", "file_hash"]
 
     SCHEME = r'\b(?:http|ftp)s?'
     TLD = r'(?:xn--[a-zA-Z0-9]{4,20}|[a-zA-Z]{2,20})'
