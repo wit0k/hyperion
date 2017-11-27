@@ -3,7 +3,7 @@ from .handlers.rtf import *
 
 class fileagent(agent):
 
-    def md5(fname):
+    def md5(self, fname):
         hash_md5 = hashlib.md5()
         with open(fname, "rb") as f:
             for chunk in iter(lambda: f.read(4096), b""):
