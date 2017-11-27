@@ -14,7 +14,7 @@ class rtf():
 
     output = []
     obj_sig_len = 4
-    output_format = ["filename", "obj_offset", "ole_type", "ole_size", "obj_sig", "ole_regex_strings", "ole_strings", "file_hash"]
+    output_format = ["filename", "obj_offset", "ole_type", "ole_size", "obj_sig", "ole_yara_sig", "ole_regex_strings", "ole_strings", "file_hash"]
 
     SCHEME = r'\b(?:http|ftp)s?'
     TLD = r'(?:xn--[a-zA-Z0-9]{4,20}|[a-zA-Z]{2,20})'
@@ -72,6 +72,8 @@ class rtf():
                         ole_yarasig += sig.rule + ","
                     if ole_yarasig[-1:] == ",":
                         ole_yarasig = ole_yarasig[:-1]
+
+                    meta_data["ole_yara_sig"] = ole_yarasig
 
                     matched_strings = ""
                     matched_strings = self.regex_scan(unique_strings)
