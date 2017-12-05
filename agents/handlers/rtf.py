@@ -4,11 +4,14 @@
 """
 import os.path
 import re
+import logging
+
 import hashlib
 
 from oletools import rtfobj, oleobj
 from ..core.yarascan import *
 
+logger = logging.getLogger('hyperion')
 
 class rtf():
 
@@ -37,6 +40,11 @@ class rtf():
     )
 
     def __init__(self, file):
+
+        logger.info("Enumerate objects ...")
+        logger.warning("Enumerate objects ...")
+        logger.debug("Enumerate objects ...")
+        logger.error("Enumerate objects ...")
 
         if os.path.isfile(file):
             meta_data = {}
