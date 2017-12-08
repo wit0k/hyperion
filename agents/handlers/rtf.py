@@ -41,10 +41,7 @@ class rtf():
 
     def __init__(self, file):
 
-        logger.info("Enumerate objects ...")
-        logger.warning("Enumerate objects ...")
-        logger.debug("Enumerate objects ...")
-        logger.error("Enumerate objects ...")
+        logger.info("INFO: Enumerate objects ...")
 
         if os.path.isfile(file):
             meta_data = {}
