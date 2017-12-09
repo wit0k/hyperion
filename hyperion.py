@@ -13,7 +13,7 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 """ Logger settings """
 logger = logging.getLogger('hyperion')
 log_handler = logging.FileHandler('logs/hyperion.log')
-log_file_format = logging.Formatter('%(levelname)s - %(threadName)s - %(thread)d - %(asctime)s - %(filename)s - %(funcName)s - %(message)s')
+log_file_format = logging.Formatter('%(levelname)s - THREAD-%(thread)d - %(asctime)s - %(filename)s - %(funcName)s - %(message)s')
 log_handler.setFormatter(log_file_format)
 logger.addHandler(log_handler)
 console_handler = logging.StreamHandler()
@@ -68,7 +68,7 @@ def main(argv):
     logger.info(f"Initiating Task Manager")
     taskmgr = task_manager()
 
-    logger.info(f"Looking for sample in: {samples_folder}")
+    logger.info(f"Looking for samples in: {samples_folder}")
 
     if os.path.isfile(samples_folder):
         pass

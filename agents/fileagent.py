@@ -21,12 +21,12 @@ class fileagent(agent):
 
     def __init__(self, file):
 
-        logger.debug(f"Processing file: {file}")
-        logger.debug("Determine the file type")
-        self.filetype = self.filetype(file)
-        self.filehash = self.md5(file)
+        if os.path.isfile(file):
+            logger.debug(f"Processing file: {file}")
+            logger.debug("Determine the file type")
+            self.filetype = self.filetype(file)
+            self.filehash = self.md5(file)
 
-        if file:
             self.file = file
             logger.debug("Lookup the file handler")
             handler = self.handlers_list[self.filetype]
@@ -48,6 +48,8 @@ class fileagent(agent):
                             output_str.append("")
 
                     print(output_str, sep=",")
+        else:
+            logger.debug(f"Unable to locate file: {file}")
 
 
 
