@@ -1,10 +1,12 @@
 import logging
 import sys
 import argparse
+import threading
 
 from agents.fileagent import *
 
 
+app_name = "Hyperion"
 """ Set working directory so the script can be executed from any location/symlink """
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
@@ -56,12 +58,13 @@ def main(argv):
     script_args.add_argument("-v", "--verbose-level", type=str, action='store', dest='verbose_level', required=False,
                              default="WARNING", help="Set the verbose level to one of following: INFO, WARNING, ERROR or DEBUG (Default: WARNING)")
 
-
     args = argsparser.parse_args()
     argc = argv.__len__()
 
+    """     -------------------------------------  Arguments check  ---------------------------------     """
     check_args(args)
 
+    logger.info(f"Starting {app_name} ...")
     logger.info(f"Looking for sample in: {samples_folder}")
 
     if os.path.isfile(samples_folder):
