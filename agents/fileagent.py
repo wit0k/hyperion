@@ -1,7 +1,12 @@
+import logging
 from .core.agent import *
 from .handlers.rtf import *
+logger = logging.getLogger('hyperion')
 
 class fileagent(agent):
+
+    def filetype(self, file):
+        return "rtf"
 
     def md5(self, fname):
         hash_md5 = hashlib.md5()
@@ -10,17 +15,23 @@ class fileagent(agent):
                 hash_md5.update(chunk)
         return hash_md5.hexdigest()
 
-    handler = {
+    handlers_list = {
         "rtf": rtf
     }
 
-    def __init__(self, file, filetype):
-        self.filetype = filetype
+    def __init__(self, file):
+
+        logger.debug(f"Processing file: {file}")
+        logger.debug("Determine the file type")
+        self.filetype = self.filetype(file)
         self.filehash = self.md5(file)
 
         if file:
             self.file = file
-            result = self.handler[self.filetype](self.file)
+            logger.debug("Lookup the file handler")
+            handler = self.handlers_list[self.filetype]
+            logger.debug(f"Execute the handler: {handler.name}({self.file})")
+            result = handler(self.file)
 
             if result.output:
                 for item in result.output:

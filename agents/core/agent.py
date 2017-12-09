@@ -1,7 +1,9 @@
 class agent(object):
 
+    name = ""
+
     def name(self):
-        pass
+        return self.name
 
     def load(self):
         pass

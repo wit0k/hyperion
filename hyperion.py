@@ -1,7 +1,7 @@
 import logging
 import sys
 import argparse
-import threading
+from agents.core.taskmgr import task_manager
 
 from agents.fileagent import *
 
@@ -13,7 +13,7 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 """ Logger settings """
 logger = logging.getLogger('hyperion')
 log_handler = logging.FileHandler('logs/hyperion.log')
-log_file_format = logging.Formatter('%(levelname)s - %(asctime)s - %(filename)s - %(funcName)s - %(message)s')
+log_file_format = logging.Formatter('%(levelname)s - %(threadName)s - %(thread)d - %(asctime)s - %(filename)s - %(funcName)s - %(message)s')
 log_handler.setFormatter(log_file_format)
 logger.addHandler(log_handler)
 console_handler = logging.StreamHandler()
@@ -48,7 +48,7 @@ def check_args(args):
 def main(argv):
 
     argsparser = argparse.ArgumentParser(usage=argparse.SUPPRESS,
-                                     description='Hyperion parser...')
+                                     description='Hyperion parser')
 
     """     -------------------------------------   Argument groups  ---------------------------------     """
     script_args = argsparser.add_argument_group('Script arguments', "\n")
@@ -64,17 +64,22 @@ def main(argv):
     """     -------------------------------------  Arguments check  ---------------------------------     """
     check_args(args)
 
-    logger.info(f"Starting {app_name} ...")
+    logger.info(f"Starting {app_name}")
+    logger.info(f"Initiating Task Manager")
+    taskmgr = task_manager()
+
     logger.info(f"Looking for sample in: {samples_folder}")
 
     if os.path.isfile(samples_folder):
-        _fagent = fileagent(samples_folder, "rtf")
+        pass
     else:
-        test = os.listdir(samples_folder)
         for file in os.listdir(samples_folder):
             file_path = samples_folder + r"/" + file
             if os.path.isfile(file_path):
-                _fagent = fileagent(file_path, "rtf")
+
+                task = taskmgr.create_task(fileagent, (file_path,), "fileagent")
+                task.run()
+                #  _fagent = fileagent(file_path, "rtf")
 
 if __name__ == "__main__":
     main(sys.argv)

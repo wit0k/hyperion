@@ -15,6 +15,7 @@ logger = logging.getLogger('hyperion')
 
 class rtf():
 
+    name = "rtf"
     output = []
     obj_sig_len = 4
     output_format = ["filename", "obj_offset", "ole_type", "ole_size", "obj_sig", "ole_yara_sig", "ole_regex_strings", "ole_strings", "file_hash"]
@@ -40,8 +41,6 @@ class rtf():
     )
 
     def __init__(self, file):
-
-        logger.info("INFO: Enumerate objects ...")
 
         if os.path.isfile(file):
             meta_data = {}
