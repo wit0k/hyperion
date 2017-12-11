@@ -5,6 +5,7 @@ from agents.core.taskmgr import task_manager
 
 from agents.fileagent import *
 
+ERROR_SAMPLE_CHECK_FAILED = -9
 
 app_name = "Hyperion"
 """ Set working directory so the script can be executed from any location/symlink """
@@ -24,9 +25,6 @@ logger.addHandler(console_handler)
 logger.setLevel(logging.NOTSET)  # Would be set by a parameter
 logger_verobse_levels = ["INFO", "WARNING", "ERROR", "DEBUG"]
 
-""" Hyperion settings """
-samples_folder = 'samples/'
-
 def check_args(args):
 
     """ Check and set appropriate logger level """
@@ -44,42 +42,59 @@ def check_args(args):
     else:
         logger.setLevel(logging.WARNING)
 
+    if args.file_path:
+        if os.path.isfile(args.file_path):
+            logger.debug(f"Sample is file: {args.file_path}")
+        else:
+            if os.path.isdir(args.file_path):
+                logger.debug(f"Sample is folder: {args.file_path}")
+            else:
+                sys.exit(ERROR_SAMPLE_CHECK_FAILED)
+
 
 def main(argv):
 
     argsparser = argparse.ArgumentParser(usage=argparse.SUPPRESS,
                                      description='Hyperion parser')
 
-    """     -------------------------------------   Argument groups  ---------------------------------     """
+    """ Argument groups """
     script_args = argsparser.add_argument_group('Script arguments', "\n")
     #query_args = argsparser.add_argument_group('Query arguments', "\n")
 
-    """     -------------------------------------   Script arguments ---------------------------------     """
+    """ Script arguments """
     script_args.add_argument("-v", "--verbose-level", type=str, action='store', dest='verbose_level', required=False,
                              default="WARNING", help="Set the verbose level to one of following: INFO, WARNING, ERROR or DEBUG (Default: WARNING)")
+    script_args.add_argument("-f", "--file", type=str, action='store', dest='file_path', required=False,
+                             help="File or folder path")
 
     args = argsparser.parse_args()
     argc = argv.__len__()
 
-    """     -------------------------------------  Arguments check  ---------------------------------     """
+    """ Arguments check """
     check_args(args)
 
     logger.info(f"Starting {app_name}")
     logger.info(f"Initiating Task Manager")
     taskmgr = task_manager()
 
-    logger.info(f"Looking for samples in: {samples_folder}")
+    """ Initiate appropriate agent """
 
-    if os.path.isfile(samples_folder):
-        pass
+    """ fileagent """
+    """ urlagent """
+
+    logger.info(f"Looking for samples in: {args.file_path}")
+    if os.path.isfile(args.file_path):
+        _fagent = fileagent(taskmgr, args.file_path)
     else:
-        for file in os.listdir(samples_folder):
-            file_path = samples_folder + r"/" + file
+        files = []
+        file_path = ""
+        for file in os.listdir(args.file_path):
+            file_path = args.file_path + r"/" + file
             if os.path.isfile(file_path):
+                files.append(file_path)
+                file_path = ""
 
-                task = taskmgr.create_task(fileagent, (file_path,), "fileagent")
-                task.run()
-                #  _fagent = fileagent(file_path, "rtf")
+        _fagent = fileagent(taskmgr, files)
 
 if __name__ == "__main__":
     main(sys.argv)

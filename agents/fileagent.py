@@ -5,7 +5,7 @@ logger = logging.getLogger('hyperion')
 
 class fileagent(agent):
 
-    def filetype(self, file):
+    def file_type(self, file):
         return "rtf"
 
     def md5(self, fname):
@@ -19,14 +19,23 @@ class fileagent(agent):
         "rtf": rtf
     }
 
-    def __init__(self, file):
+    def prepare(self, files):
+
+        if not isinstance(files, list):
+            files = [files]
+
+        for file in files:
+            self.taskmgr.create_task(self.process, (file, ), "fileagent")
+
+        self.taskmgr.execute_tasks()
+
+    def process(self, file):
 
         if os.path.isfile(file):
             logger.debug(f"Processing file: {file}")
             logger.debug("Determine the file type")
-            self.filetype = self.filetype(file)
+            self.filetype = self.file_type(file)
             self.filehash = self.md5(file)
-
             self.file = file
             logger.debug("Lookup the file handler")
             handler = self.handlers_list[self.filetype]
@@ -47,9 +56,17 @@ class fileagent(agent):
                         except KeyError:
                             output_str.append("")
 
-                    print(output_str, sep=",")
+                    logger.debug(output_str)
+                    output_str = ""
+                    #print(output_str, sep=",")
+
+                logger.debug("Clear the result buffer")
+                result.output.clear()
         else:
             logger.debug(f"Unable to locate file: {file}")
 
+    def __init__(self, taskmgr, files):
+        self.taskmgr = taskmgr
+        self.prepare(files)
 
 

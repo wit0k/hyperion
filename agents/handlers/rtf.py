@@ -40,54 +40,65 @@ class rtf():
         ("Executable file name", re.compile(r"(?i)\b\w+\.(EXE|PIF|GADGET|MSI|MSP|MSC|VBS|VBE|VB|JSE|JS|WSF|WSC|WSH|WS|BAT|CMD|DLL|SCR|HTA|CPL|CLASS|JAR|PS1XML|PS1|PS2XML|PS2|PSC1|PSC2|SCF|LNK|INF|REG)\b"))
     )
 
+    def parse(self):
+
+        meta_data = {}
+        file = self.file  # need to adopt the code below, to remove this line
+        _objects = list(rtfobj.rtf_iter_objects(self.file))
+
+        if _objects:
+
+            logger.debug(f"Enumerating document objects: {file}")
+            for offset, orig_len, data in _objects:
+                meta_data["filename"] = os.path.basename(file)
+                meta_data["obj_size"] = len(data)
+                meta_data["obj_offset"] = '0x%08X' % offset
+                meta_data["obj_sig"] = str(data[:self.obj_sig_len])
+                try:
+                    _oleobj = oleobj.OleObject()
+                    _oleobj.parse(data)
+                    meta_data["ole_type"] = _oleobj.class_name
+                    meta_data["ole_size"] = _oleobj.data_size
+                except Exception:
+                    meta_data["ole_type"] = ""
+                    meta_data["ole_size"] = ""
+
+                try:
+                    unique_strings = ""
+                    data_str = data.decode(errors='ignore')
+                    unique_strings = "\r".join(list(set(re.findall("[^\x00-\x1F\x7F-\xFF]{3,}", data_str))))
+                except Exception:
+                    unique_strings = ""
+
+                meta_data["ole_strings"] = unique_strings
+
+                yscanner = yarascan("agents/rules/CVE-2017-11882.yr")
+                ole_yarasig = ""
+                for sig in yscanner.scan_buffer(data):
+                    ole_yarasig += sig.rule + ","
+                if ole_yarasig[-1:] == ",":
+                    ole_yarasig = ole_yarasig[:-1]
+
+                meta_data["ole_yara_sig"] = ole_yarasig
+
+                matched_strings = ""
+                matched_strings = self.regex_scan(unique_strings)
+                meta_data["ole_regex_strings"] = matched_strings
+
+                self.output.append(meta_data.copy())
+                meta_data.clear()
+            logger.debug(f"{len(_objects)} objects found in: {self.file}")
+        else:
+            logger.warning(f"Unsupported file: {file}")
+            return None
+
     def __init__(self, file):
 
         if os.path.isfile(file):
-            meta_data = {}
-            _objects = list(rtfobj.rtf_iter_objects(file))
+            self.file = file
+            self.parse()
 
-            if _objects:
-                for offset, orig_len, data in _objects:
-                    meta_data["filename"] = os.path.basename(file)
-                    meta_data["obj_size"] = len(data)
-                    meta_data["obj_offset"] = '0x%08X' % offset
-                    meta_data["obj_sig"] = str(data[:self.obj_sig_len])
-                    try:
-                        _oleobj = oleobj.OleObject()
-                        _oleobj.parse(data)
-                        meta_data["ole_type"] = _oleobj.class_name
-                        meta_data["ole_size"] = _oleobj.data_size
-                    except Exception:
-                        meta_data["ole_type"] = ""
-                        meta_data["ole_size"] = ""
 
-                    try:
-                        unique_strings = ""
-                        data_str = data.decode(errors='ignore')
-                        unique_strings = "\r".join(list(set(re.findall("[^\x00-\x1F\x7F-\xFF]{3,}", data_str))))
-                    except Exception:
-                        unique_strings = ""
-
-                    meta_data["ole_strings"] = unique_strings
-
-                    yscanner = yarascan("agents/rules/CVE-2017-11882.yr")
-                    ole_yarasig = ""
-                    for sig in yscanner.scan_buffer(data):
-                        ole_yarasig += sig.rule + ","
-                    if ole_yarasig[-1:] == ",":
-                        ole_yarasig = ole_yarasig[:-1]
-
-                    meta_data["ole_yara_sig"] = ole_yarasig
-
-                    matched_strings = ""
-                    matched_strings = self.regex_scan(unique_strings)
-                    meta_data["ole_regex_strings"] = matched_strings
-
-                    self.output.append(meta_data.copy())
-                    meta_data.clear()
-                else:
-                    """ Unsupported file format """
-                    return None
         else:
             print(f"File not found: {file}")
 
