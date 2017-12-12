@@ -33,35 +33,24 @@ class fileagent(agent):
 
     def process(self, file):
 
+        item = {"file_id": "", "file_path": "", "file_type": ""}
+
         if os.path.isfile(file):
-            logger.debug(f"Processing file: {file}")
-            logger.debug("Determine the file type")
-            self.filetype = self.file_type(file)
-            self.filehash = self.md5(file)
-            self.file = file
-            logger.debug("Lookup the file handler")
-            handler = self.handlers_list[self.filetype]
-            logger.debug(f"Execute the handler: {handler.name}({self.file})")
-            result = handler(self.file)
+            logger.debug(f"Process file: {file}")
+            item["file_type"] = self.file_type(file)
+            logger.debug(f'File type: {item["file_type"]}')
+            item["file_id"] = self.md5(file)
+            item["file_path"] = file
+            logger.debug(f'File md5: {item["file_id"]}')
+            handler = self.handlers_list[item["file_type"]]
+            logger.debug(f"File handler: {handler}")
+            logger.debug(f'Execute file handler: {handler.name}({file})')
+            result = handler(file)
+
             if result.output:
-                for item in result.output:
-                    output_str = []
-
-                    item["file_hash"] = self.filehash
-                    for key in result.output_format:
-                        try:
-                            if isinstance(item[key], list):
-                                output_str.append("; ".join(item[key]))
-                            else:
-                                output_str.append(str(item[key]))
-                        except KeyError:
-                            output_str.append("")
-
-                    logger.debug(output_str)
-                    self.results.append(output_str)
-                    output_str = ""
-                    #print(output_str, sep=",")
-
+                logger.debug(result.output)
+                item["result"] = result.output
+                self.results.append(item.copy())
                 logger.debug("Clear the result buffer")
                 result.output.clear()
         else:
