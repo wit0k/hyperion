@@ -6,7 +6,7 @@ logger = logging.getLogger('hyperion')
 class fileagent(agent):
 
     name = "fileagent"
-    results = []
+
     def file_type(self, file):
         return "rtf"
 
@@ -48,9 +48,9 @@ class fileagent(agent):
             result = handler(file)
 
             if result.output:
-                logger.debug(result.output)
-                item["result"] = result.output
+                item["result"] = result.output.copy()
                 self.results.append(item.copy())
+                logger.debug(item)
                 logger.debug("Clear the result buffer")
                 result.output.clear()
         else:
@@ -58,6 +58,7 @@ class fileagent(agent):
 
     def __init__(self, taskmgr, files):
         logger.debug(f"Initialize {self.name}")
+        self.results = []
         self.taskmgr = taskmgr
         self.prepare(files)
 
