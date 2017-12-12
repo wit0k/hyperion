@@ -65,7 +65,7 @@ def main(argv):
     script_args.add_argument("-v", "--verbose-level", type=str, action='store', dest='verbose_level', required=False,
                              default="WARNING", help="Set the verbose level to one of following: INFO, WARNING, ERROR or DEBUG (Default: WARNING)")
     script_args.add_argument("-f", "--file", type=str, action='store', dest='file_path', required=False,
-                             help="File or folder path")
+                             help="File or folder path for samples")
 
     args = argsparser.parse_args()
     argc = argv.__len__()

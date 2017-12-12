@@ -21,17 +21,18 @@ class fileagent(agent):
         "rtf": rtf
     }
 
-    def prepare(self, files):
+    def open_task(self, files):
 
         if not isinstance(files, list):
             files = [files]
-
+        """ Create tasks """
         for file in files:
-            self.taskmgr.create_task(self.process, (file, ), "fileagent")
+            self.taskmgr.create_task(self.taskmgr, self.process_task, file, "fileagent")
 
+        """ Execute Tasks """
         self.taskmgr.execute_tasks()
 
-    def process(self, file):
+    def process_task(self, file, task_obj):
 
         item = {"file_id": "", "file_path": "", "file_type": ""}
 
@@ -45,7 +46,7 @@ class fileagent(agent):
             handler = self.handlers_list[item["file_type"]]
             logger.debug(f"File handler: {handler}")
             logger.debug(f'Execute file handler: {handler.name}({file})')
-            result = handler(file)
+            result = handler(file, task_obj)
 
             if result.output:
                 item["result"] = result.output.copy()
@@ -60,6 +61,6 @@ class fileagent(agent):
         logger.debug(f"Initialize {self.name}")
         self.results = []
         self.taskmgr = taskmgr
-        self.prepare(files)
+        self.open_task(files)
 
 
