@@ -88,20 +88,15 @@ class rtf():
                 self.output.append(meta_data.copy())
                 meta_data.clear()
             logger.debug(f"{len(_objects)} objects found in: {self.file}")
-            self.task.close(self.task)
         else:
             logger.warning(f"Unsupported file: {file}")
-            self.task.close(self.task)
             return None
 
-    def __init__(self, file, task_obj):
+    def __init__(self, file):
 
         if os.path.isfile(file):
-            self.task = task_obj
             self.file = file
             self.parse()
-
-
         else:
             print(f"File not found: {file}")
 

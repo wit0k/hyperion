@@ -1,4 +1,5 @@
 import logging
+import threading
 from .core.agent import *
 from .handlers.rtf import *
 logger = logging.getLogger('hyperion')
@@ -34,33 +35,41 @@ class fileagent(agent):
 
     def process_task(self, file, task_obj):
 
-        item = {"file_id": "", "file_path": "", "file_type": ""}
+        with lock:
+            item = {"file_id": "", "file_path": "", "file_type": ""}
 
-        if os.path.isfile(file):
-            logger.debug(f"Process file: {file}")
-            item["file_type"] = self.file_type(file)
-            logger.debug(f'File type: {item["file_type"]}')
-            item["file_id"] = self.md5(file)
-            item["file_path"] = file
-            logger.debug(f'File md5: {item["file_id"]}')
-            handler = self.handlers_list[item["file_type"]]
-            logger.debug(f"File handler: {handler}")
-            logger.debug(f'Execute file handler: {handler.name}({file})')
-            result = handler(file, task_obj)
+            if os.path.isfile(file):
+                logger.debug(f"Process file: {file}")
+                item["file_type"] = self.file_type(file)
+                logger.debug(f'File type: {item["file_type"]}')
+                item["file_id"] = self.md5(file)
+                item["file_path"] = file
+                logger.debug(f'File md5: {item["file_id"]}')
+                handler = self.handlers_list[item["file_type"]]
+                logger.debug(f"File handler: {handler}")
+                logger.debug(f'Execute file handler: {handler.name}({file})')
+                result = handler(file)
 
-            if result.output:
-                item["result"] = result.output.copy()
-                self.results.append(item.copy())
-                logger.debug(item)
-                logger.debug("Clear the result buffer")
-                result.output.clear()
-        else:
-            logger.debug(f"Unable to locate file: {file}")
+                if result.output:
+                    item["result"] = result.output.copy()
+                    self.results.append(item.copy())
+                    logger.error(item)
+                    logger.debug("Clear the result buffer")
+                    result.output.clear()
+            else:
+                logger.debug(f"Unable to locate file: {file}")
+
+            task_obj.close()
 
     def __init__(self, taskmgr, files):
         logger.debug(f"Initialize {self.name}")
+
+        global lock
+        lock = threading.Lock()
+
         self.results = []
         self.taskmgr = taskmgr
+        self.files = files
         self.open_task(files)
 
 
