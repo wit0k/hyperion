@@ -18,7 +18,8 @@ class rtf():
     name = "rtf"
     output = []
     obj_sig_len = 4
-    output_format = ["filename", "obj_offset", "ole_type", "ole_size", "obj_sig", "ole_yara_sig", "ole_regex_strings", "ole_strings", "file_hash"]
+    output_format = ["filename", "obj_offset", "ole_type", "ole_size", "obj_sig", "ole_yara_sig", "ole_regex_strings",
+                     "ole_strings", "file_path", "file_hash"]
 
     SCHEME = r'\b(?:http|ftp)s?'
     TLD = r'(?:xn--[a-zA-Z0-9]{4,20}|[a-zA-Z]{2,20})'
@@ -47,6 +48,8 @@ class rtf():
         _objects = list(rtfobj.rtf_iter_objects(self.file))
 
         if _objects:
+
+            meta_data["file_path"] = self.file
 
             logger.debug(f"Enumerating document objects: {file}")
             for offset, orig_len, data in _objects:

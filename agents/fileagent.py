@@ -5,6 +5,8 @@ logger = logging.getLogger('hyperion')
 
 class fileagent(agent):
 
+    name = "fileagent"
+    results = []
     def file_type(self, file):
         return "rtf"
 
@@ -41,7 +43,6 @@ class fileagent(agent):
             handler = self.handlers_list[self.filetype]
             logger.debug(f"Execute the handler: {handler.name}({self.file})")
             result = handler(self.file)
-
             if result.output:
                 for item in result.output:
                     output_str = []
@@ -57,6 +58,7 @@ class fileagent(agent):
                             output_str.append("")
 
                     logger.debug(output_str)
+                    self.results.append(output_str)
                     output_str = ""
                     #print(output_str, sep=",")
 
@@ -66,6 +68,7 @@ class fileagent(agent):
             logger.debug(f"Unable to locate file: {file}")
 
     def __init__(self, taskmgr, files):
+        logger.debug(f"Initialize {self.name}")
         self.taskmgr = taskmgr
         self.prepare(files)
 
