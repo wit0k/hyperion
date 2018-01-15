@@ -95,6 +95,9 @@ def main(argv):
                 file_path = ""
 
         _fagent = fileagent(taskmgr, files)
+        _fagent.process_files()
+        _fagent.print_results()
+
         test=""
 
 if __name__ == "__main__":

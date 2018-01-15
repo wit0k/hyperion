@@ -5,6 +5,7 @@
 import os.path
 import re
 import logging
+import time
 
 import hashlib
 
@@ -16,9 +17,8 @@ logger = logging.getLogger('hyperion')
 class rtf():
 
     name = "rtf"
-    output = []
     obj_sig_len = 4
-    output_format = ["filename", "obj_offset", "ole_type", "ole_size", "obj_sig", "ole_yara_sig", "ole_regex_strings",
+    output_format = ["filename", "obj_count", "obj_offset", "ole_type", "ole_size", "obj_sig", "ole_yara_sig", "ole_regex_strings",
                      "ole_strings"]
 
     SCHEME = r'\b(?:http|ftp)s?'
@@ -41,16 +41,23 @@ class rtf():
         ("Executable file name", re.compile(r"(?i)\b\w+\.(EXE|PIF|GADGET|MSI|MSP|MSC|VBS|VBE|VB|JSE|JS|WSF|WSC|WSH|WS|BAT|CMD|DLL|SCR|HTA|CPL|CLASS|JAR|PS1XML|PS1|PS2XML|PS2|PSC1|PSC2|SCF|LNK|INF|REG)\b"))
     )
 
-    def parse(self):
+    def __init__(self, file):
+        """ Init the class object """
+        self.file = file
+        self.task = None
+
+    def run(self):
 
         meta_data = {}
         file = self.file  # need to adopt the code below, to remove this line
         _objects = list(rtfobj.rtf_iter_objects(self.file))
+        output = []
 
         if _objects:
             logger.debug(f"Enumerating document objects: {file}")
             for offset, orig_len, data in _objects:
                 meta_data["filename"] = os.path.basename(file)
+                meta_data["obj_count"] = len(_objects)
                 meta_data["obj_size"] = len(data)
                 meta_data["obj_offset"] = '0x%08X' % offset
                 meta_data["obj_sig"] = str(data[:self.obj_sig_len])
@@ -85,20 +92,14 @@ class rtf():
                 matched_strings = self.regex_scan(unique_strings)
                 meta_data["ole_regex_strings"] = matched_strings
 
-                self.output.append(meta_data.copy())
+                output.append(meta_data.copy())
                 meta_data.clear()
             logger.debug(f"{len(_objects)} objects found in: {self.file}")
         else:
             logger.warning(f"Unsupported file: {file}")
             return None
 
-    def __init__(self, file):
-
-        if os.path.isfile(file):
-            self.file = file
-            self.parse()
-        else:
-            print(f"File not found: {file}")
+        return output
 
 
     def regex_scan(self, strings):

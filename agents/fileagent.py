@@ -22,54 +22,44 @@ class fileagent(agent):
         "rtf": rtf
     }
 
-    def open_task(self, files):
+    def process_files(self):
+        """ Creates a task for each file with appropriate handler  """
 
-        if not isinstance(files, list):
-            files = [files]
-        """ Create tasks """
-        for file in files:
-            self.taskmgr.create_task(self.taskmgr, self.process_task, file, "fileagent")
-
-        """ Execute Tasks """
-        self.taskmgr.execute_tasks()
-
-    def process_task(self, file, task_obj):
-
-        with lock:
-            item = {"file_id": "", "file_path": "", "file_type": ""}
-
+        for file in self.files:
             if os.path.isfile(file):
-                logger.debug(f"Process file: {file}")
-                item["file_type"] = self.file_type(file)
-                logger.debug(f'File type: {item["file_type"]}')
-                item["file_id"] = self.md5(file)
-                item["file_path"] = file
-                logger.debug(f'File md5: {item["file_id"]}')
-                handler = self.handlers_list[item["file_type"]]
-                logger.debug(f"File handler: {handler}")
-                logger.debug(f'Execute file handler: {handler.name}({file})')
-                result = handler(file)
+                """ Check file type """
+                file_type = self.file_type(file)
 
-                if result.output:
-                    item["result"] = result.output.copy()
-                    self.results.append(item.copy())
-                    logger.error(item)
-                    logger.debug("Clear the result buffer")
-                    result.output.clear()
-            else:
-                logger.debug(f"Unable to locate file: {file}")
+                """ Obtain file handler """
+                handler = self.handlers_list[file_type](file)
 
-            task_obj.close()
+                """ Adjust task properties """
+                properties = {}
+                properties["file_type"] = file_type
+                properties["file_hash"] = self.md5(file)
+                properties["file_path"] = file
+
+                if handler:
+                    self.results.append(handler.run())
+                else:
+                    logger.warning("File handler not found! -> %s" % file)
+
+        test = ""
+
+    def print_results(self):
+        for item in self.results:
+            logger.error(item)
 
     def __init__(self, taskmgr, files):
-        logger.debug(f"Initialize {self.name}")
 
-        global lock
-        lock = threading.Lock()
+        logger.debug(f"Initialize {self.name}")
 
         self.results = []
         self.taskmgr = taskmgr
-        self.files = files
-        self.open_task(files)
 
+        """ Convert the list """
+        if not isinstance(files, list):
+            self.files = [files]
+        else:
+            self.files = files
 
