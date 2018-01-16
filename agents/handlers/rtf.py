@@ -44,9 +44,9 @@ class rtf():
     def __init__(self, file):
         """ Init the class object """
         self.file = file
-        self.task = None
+        self.queue = None
 
-    def run(self):
+    def run(self, queue):
 
         meta_data = {}
         file = self.file  # need to adopt the code below, to remove this line
@@ -99,7 +99,11 @@ class rtf():
             logger.warning(f"Unsupported file: {file}")
             return None
 
-        return output
+        print(output)
+        queue.task_done()
+
+        test = ""
+        #return output
 
 
     def regex_scan(self, strings):

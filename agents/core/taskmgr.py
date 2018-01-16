@@ -1,18 +1,79 @@
 import threading
 import logging
+from queue import Queue
+logger = logging.getLogger('hyperion')
 import time
 
 logger = logging.getLogger('hyperion')
+MAX_SIMULTANEOUS_TASKS_COUNT = 10
 
 class task_manager(object):
 
-    max_tasks_count = 10
-    tasks = []
+
+    tasks = Queue(maxsize=MAX_SIMULTANEOUS_TASKS_COUNT)
+    all_tasks = Queue()
 
     def __init__(self):
-        self.lock = threading.Lock()
+
+        self.complete = False
+
+        #self.lock = threading.Lock()
         self.system_tasks = []
         self.active_tasks = []
+
+        """ Setup system daemon Threads """
+        t_update_tasks =  threading.Thread(name="update_tasks_queue", target=self.update_tasks_queue)
+        t_run_tasks = threading.Thread(name="run_tasks", target=self.run_tasks)
+
+        """ Start Daemon threads which would handle the thread execution """
+        t_update_tasks.start()
+        t_run_tasks.start()
+
+    def update_tasks_queue(self):
+        """ Make sure that the amount of Tasks to execute is MAX_SIMULTANEOUS_TASKS_COUNT """
+        logger.debug("Start monitoring the Task queue...")
+        while True:
+            if self.tasks.qsize() < MAX_SIMULTANEOUS_TASKS_COUNT:
+                try:
+                    task = self.all_tasks.get()
+                    self.tasks.put(task)
+                except Exception:
+                    test = ""
+
+    def run_tasks(self):
+        """ Daemon thread which monitors the tasks and execute them """
+
+        execute = True
+        logger.debug("Ready to execute Tasks...")
+        while execute:
+            task = self.tasks.get()
+            logger.debug(f"Execute Task ID: {task.id}")
+            task.run()
+
+            if self.complete:
+                logger.debug(f"No more tasks to execute. Exit")
+                break
+
+    def add_task(self, task):
+        self.all_tasks.put(task)
+
+    def new_task(self, func_handler, func_param=(), task_name="", task_type="", properties={}):
+        task = _task(self, func_handler, func_param, task_name, properties, task_type)
+        self.add_task(task)
+
+        #self.tasks.append(task)
+        #return task
+
+    def stop(self):
+
+        while self.complete:
+            if self.all_tasks.qsize() == 0 and self.tasks.unfinished_tasks == 0:
+                self.complete = True
+                exit(-1)
+            else:
+                time.sleep(1)
+
+
 
     def count_active_tasks(self):
             _len = len(self.active_tasks)
@@ -31,12 +92,6 @@ class task_manager(object):
                 logger.debug(f"Task-{task_obj.id} Active Tasks: {self.count_active_tasks()}")
             except Exception:
                 logger.warning(f"The Task-{task_obj.id} was not found in the queue")
-
-    def create_task(self, func_handler, func_param=(), task_name="", task_type="", properties={}):
-        logger.debug(f"Creating new task (task_name: {task_name}")
-        task = _task(self, func_handler, func_param, task_name, properties, task_type)
-        self.tasks.append(task)
-        return task
 
     def execute_task(self, task):
         task.thread.setDaemon(True)
@@ -73,8 +128,9 @@ class _task():
     def __init__(self, taskmgr, func_handler, func_param=(), task_name="", properties={}, task_type=""):
 
         self.taskmgr = taskmgr
-        self.id = None
+        self.id = properties["id"]
         self.thread = None
+        self.thread_id = None
         self.handler = None
         self.function_handler = None
         self.name = task_name
@@ -94,8 +150,7 @@ class _task():
     def run(self):
         try:
             self.thread.start()
-            self.id = self.thread.ident
-            return self.id
+            self.thread_id = self.thread.ident
         except Exception:
             logger.error(Exception)
             return None

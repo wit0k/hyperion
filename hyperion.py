@@ -79,9 +79,9 @@ def main(argv):
 
     """ Initiate appropriate agent """
 
-    """ fileagent """
     """ urlagent """
 
+    """ fileagent """
     logger.info(f"Looking for samples in: {args.file_path}")
     if os.path.isfile(args.file_path):
         _fagent = fileagent(taskmgr, args.file_path)
@@ -96,7 +96,8 @@ def main(argv):
 
         _fagent = fileagent(taskmgr, files)
         _fagent.process_files()
-        _fagent.print_results()
+
+        #_fagent.print_results()
 
         test=""
 
