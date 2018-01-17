@@ -61,6 +61,7 @@ class task_manager(object):
                 print(f"Remaining Tasks: {self.all_tasks.unfinished_tasks}")
                 print(f"TaskMgr Complete: {self.complete}")
 
+                q_size = self.tasks.qsize()
                 logger.debug("Running Tasks...")
                 for i in range(0, MAX_SIMULTANEOUS_TASKS_COUNT):
                     try:
