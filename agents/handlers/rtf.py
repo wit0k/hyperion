@@ -6,7 +6,7 @@ import os.path
 import re
 import logging
 import time
-
+import random
 import hashlib
 
 from oletools import rtfobj, oleobj
@@ -54,7 +54,7 @@ class rtf():
         output = []
 
         if _objects:
-            logger.debug(f"Enumerating document objects: {file}")
+            #logger.debug(f"Enumerating document objects: {file}")
             for offset, orig_len, data in _objects:
                 meta_data["filename"] = os.path.basename(file)
                 meta_data["obj_count"] = len(_objects)
@@ -94,13 +94,19 @@ class rtf():
 
                 output.append(meta_data.copy())
                 meta_data.clear()
-            logger.debug(f"{len(_objects)} objects found in: {self.file}")
+            #logger.debug(f"{len(_objects)} objects found in: {self.file}")
         else:
             logger.warning(f"Unsupported file: {file}")
             return None
 
-        print(output)
+        #_t = random.randint(5, 7)
+        #time.sleep(_t)
+
+
+        print(output[0]["filename"], output[0]["obj_offset"])
+
         queue.task_done()
+        logger.debug(f"Close Task: {file} -> Queue unfinished_tasks: {queue.unfinished_tasks}")
 
         test = ""
         #return output

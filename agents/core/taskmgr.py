@@ -1,11 +1,13 @@
 import threading
 import logging
-from queue import Queue
+from queue import Queue, Empty
 logger = logging.getLogger('hyperion')
 import time
 
 logger = logging.getLogger('hyperion')
+MONITOR_THREAD_NAME = "TaskMgr.Tasks.Handler"
 MAX_SIMULTANEOUS_TASKS_COUNT = 10
+SYSTEM_TASK_SLEEP_TIME = 100/1000.0
 
 class task_manager(object):
 
@@ -17,111 +19,101 @@ class task_manager(object):
 
         self.complete = False
 
-        #self.lock = threading.Lock()
-        self.system_tasks = []
-        self.active_tasks = []
-
         """ Setup system daemon Threads """
-        t_update_tasks =  threading.Thread(name="update_tasks_queue", target=self.update_tasks_queue)
-        t_run_tasks = threading.Thread(name="run_tasks", target=self.run_tasks)
+        t_update_tasks =  threading.Thread(name=MONITOR_THREAD_NAME, target=self.update_tasks_queue)
+        #t_run_tasks = threading.Thread(name="TaskMgr.Queue.Handler", target=self.run_tasks)
 
         """ Start Daemon threads which would handle the thread execution """
+        t_update_tasks.daemon = True
         t_update_tasks.start()
-        t_run_tasks.start()
+        #t_run_tasks.start()
 
     def update_tasks_queue(self):
-        """ Make sure that the amount of Tasks to execute is MAX_SIMULTANEOUS_TASKS_COUNT """
+        """ ... """
+
+        print(f"Remaining Tasks: {self.all_tasks.unfinished_tasks}")
+
         logger.debug("Start monitoring the Task queue...")
-        while True:
-            if self.tasks.qsize() < MAX_SIMULTANEOUS_TASKS_COUNT:
+        while self.complete is False:
+            """ Insert tasks in the queue up to  MAX_SIMULTANEOUS_TASKS_COUNT """
+
+            if self.tasks.unfinished_tasks == 0 and self.all_tasks.unfinished_tasks == 0:
+                #print(f"Waiting for tasks ... (TaskMgr Complete: {self.complete})")
+                time.sleep(SYSTEM_TASK_SLEEP_TIME)
+
+            elif self.tasks.unfinished_tasks < MAX_SIMULTANEOUS_TASKS_COUNT and self.all_tasks.unfinished_tasks != 0:
+                print(f"Current Tasks: {self.tasks.unfinished_tasks}")
+                """ Pull a new task """
                 try:
-                    task = self.all_tasks.get()
+                    task = self.all_tasks.get_nowait()
+                    """ Mark the new task for execution """
                     self.tasks.put(task)
-                except Exception:
+
+                    """ Decrease the count of remaining tasks (unfinished_tasks - 1) """
+                    self.all_tasks.task_done()
+                except Empty:
                     test = ""
 
+            else:
+                """ Execute the tasks """
+                #time.sleep(SYSTEM_TASK_SLEEP_TIME)
+                print(f"Current Tasks: {self.tasks.unfinished_tasks}")
+                print(f"Remaining Tasks: {self.all_tasks.unfinished_tasks}")
+                print(f"TaskMgr Complete: {self.complete}")
+
+                logger.debug("Running Tasks...")
+                for i in range(0, MAX_SIMULTANEOUS_TASKS_COUNT):
+                    try:
+                        task = self.tasks.get_nowait()
+                        logger.debug(f"Execute Task ID: {task.id} - File: {task.properties['file_path']}")
+                        task.run()
+                    except Empty:
+                        test = ""
+
+                print("C")
+
+                test = ""
+                if self.complete:
+                    logger.debug(f"No more tasks to monitor. Exit")
+                    break
+            print("-------------------------")
+        print("Oupssssssss!!!!!!")
+
+
     def run_tasks(self):
-        """ Daemon thread which monitors the tasks and execute them """
+        """ Thread which monitors the tasks and execute them """
 
-        execute = True
         logger.debug("Ready to execute Tasks...")
-        while execute:
-            task = self.tasks.get()
-            logger.debug(f"Execute Task ID: {task.id}")
-            task.run()
+        while self.complete is False:
+            if self.tasks.unfinished_tasks < MAX_SIMULTANEOUS_TASKS_COUNT:
+                task = self.tasks.get()
+                logger.debug(f"Execute Task ID: {task.id} - File: {task.properties['file_path']}")
+                task.run()
+            else:
+                time.sleep(SYSTEM_TASK_SLEEP_TIME)
 
-            if self.complete:
-                logger.debug(f"No more tasks to execute. Exit")
-                break
+        if self.complete:
+            logger.debug(f"No more tasks to execute. Exit")
 
     def add_task(self, task):
         self.all_tasks.put(task)
+
 
     def new_task(self, func_handler, func_param=(), task_name="", task_type="", properties={}):
         task = _task(self, func_handler, func_param, task_name, properties, task_type)
         self.add_task(task)
 
-        #self.tasks.append(task)
-        #return task
-
     def stop(self):
 
-        while self.complete:
-            if self.all_tasks.qsize() == 0 and self.tasks.unfinished_tasks == 0:
+        while self.complete is False:
+
+            print ("Stoping ....")
+            if self.all_tasks.unfinished_tasks == 0 and self.tasks.unfinished_tasks == 0:
                 self.complete = True
-                exit(-1)
-            else:
-                time.sleep(1)
-
-
-
-    def count_active_tasks(self):
-            _len = len(self.active_tasks)
-
-            if _len:
-                return _len
-            else:
-                return 0
-
-    def close_task(self, task_obj):
-        with self.lock:
-            try:
-                self.tasks.remove(task_obj)
-                self.active_tasks.remove(task_obj)
-                logger.debug(f"Task-{task_obj.id} removed from the queue successfully")
-                logger.debug(f"Task-{task_obj.id} Active Tasks: {self.count_active_tasks()}")
-            except Exception:
-                logger.warning(f"The Task-{task_obj.id} was not found in the queue")
-
-    def execute_task(self, task):
-        task.thread.setDaemon(True)
-        task.thread = task.run()
-
-    def _wait(self, active_tasks_count):
-        pass
-        """
-        _continue = False
-        "while active_tasks_count >= self.max_tasks_count:
-            logger.debug(f"Active Tasks: {active_tasks_count} - Waiting 1 second for free slot in Tasks queue...")
-            active_tasks_count = self.count_active_tasks()
-            _continue = True
-
-        if _continue:
-            logger.debug(f"Active Tasks: {active_tasks_count} - Release the queue")
-        """
-        return True
-
-    def execute_tasks(self):
-        for task in self.tasks:
-            try:
-                task.thread.setDaemon(True)
-                if self._wait(self.count_active_tasks()):
-                    task.thread = task.run()
-                    self.active_tasks.append(task)
-                    logger.debug(f"Started Task-{task.id}")
-
-            except Exception:
-                logger.error(f"Unable to run Thread-{task.name} - Error: {Exception}")
+                logger.debug("Stopping TaskMgr Monitor threads...")
+                for thread in threading.enumerate():
+                    if thread.name == MONITOR_THREAD_NAME:
+                        logger.debug(f"Daemon thread: {MONITOR_THREAD_NAME} remain started...")
 
 class _task():
 
@@ -154,8 +146,5 @@ class _task():
         except Exception:
             logger.error(Exception)
             return None
-
-    def close(self):
-        self.taskmgr.close_task(self)
 
 

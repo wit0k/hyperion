@@ -28,16 +28,15 @@ class fileagent(agent):
 
         for file in self.files:
 
-            file_type = self.file_type(file)
-            file_hash = self.md5(file)
-
+            """ Set task properties """
             properties = {}
             properties["file_path"] = file
-            properties["file_hash"] = file_hash
+            properties["file_hash"] = self.md5(file)
             properties["id"] = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M%S') + properties["file_hash"].upper()
-            properties["file_type"] = file_type
+            properties["file_type"] = self.file_type(file)
 
-            handler = self.handlers_list[file_type](file)
+            """ Get the Handler """
+            handler = self.handlers_list[properties["file_type"]](file)
 
             if handler:
                 self.taskmgr.new_task(func_handler=handler.run, func_param=(self.taskmgr.tasks,), task_name="",
@@ -45,32 +44,19 @@ class fileagent(agent):
 
 
         # it will resume when all items have been processed (meaning that a task_done() call was received for every item that had been put() into the queue)
+        self.taskmgr.all_tasks.join()
         self.taskmgr.tasks.join()
+
+        print(f"Current Tasks: {self.taskmgr.tasks.unfinished_tasks}")
+        print(f"Remaining Tasks: {self.taskmgr.all_tasks.unfinished_tasks}")
+        print(f"TaskMgr Complete: {self.taskmgr.complete}")
 
         self.taskmgr.stop()
 
+
+
         test = ""
-        """ Working single thread code
-        for file in self.files:
-            if os.path.isfile(file):
-                # Check file type
-                file_type = self.file_type(file)
 
-                # Obtain file handler
-                handler = self.handlers_list[file_type](file)
-
-                # Adjust task properties
-                properties = {}
-                properties["file_type"] = file_type
-                properties["file_hash"] = self.md5(file)
-                properties["file_path"] = file
-
-                if handler:
-                    self.results.append(handler.run())
-                else:
-                    logger.warning("File handler not found! -> %s" % file)
-        """
-        test = ""
 
     def print_results(self):
 
