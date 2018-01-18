@@ -95,21 +95,14 @@ class rtf():
                 output.append(meta_data.copy())
                 meta_data.clear()
             #logger.debug(f"{len(_objects)} objects found in: {self.file}")
+
+            print(output[0]["filename"], output[0]["obj_offset"])
+
         else:
             logger.warning(f"Unsupported file: {file}")
-            return None
-
-        #_t = random.randint(5, 7)
-        #time.sleep(_t)
-
-
-        print(output[0]["filename"], output[0]["obj_offset"])
-
+        
         queue.task_done()
         logger.debug(f"Close Task: {file} -> Queue unfinished_tasks: {queue.unfinished_tasks}")
-
-        test = ""
-        #return output
 
 
     def regex_scan(self, strings):
