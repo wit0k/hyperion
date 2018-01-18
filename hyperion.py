@@ -85,6 +85,7 @@ def main(argv):
     logger.info(f"Looking for samples in: {args.file_path}")
     if os.path.isfile(args.file_path):
         _fagent = fileagent(taskmgr, args.file_path)
+        _fagent.process_files()
     else:
         files = []
         file_path = ""
