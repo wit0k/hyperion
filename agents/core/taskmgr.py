@@ -79,6 +79,7 @@ class task_manager(object):
     def stop(self):
 
         execute = True
+        self.complete = True
         logger.info(f"Stopping {MONITOR_THREAD_NAME} ...")
         logger.debug("Waiting for all tasks to be finished...")
         while execute:
