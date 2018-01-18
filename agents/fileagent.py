@@ -26,6 +26,7 @@ class fileagent(agent):
     def process_files(self):
         """ Creates a task for each file with appropriate handler  """
 
+        logger.info(f"Processing [{len(self.files)}] files")
         for file in self.files:
 
             """ Set task properties """
@@ -43,44 +44,19 @@ class fileagent(agent):
                                          task_type=self.name, properties=properties)
 
 
-        # it will resume when all items have been processed (meaning that a task_done() call was received for every item that had been put() into the queue)
         self.taskmgr.all_tasks.join()
 
-        print("---------------------- self.taskmgr.all_tasks.join() --------------------------------")
-        print(f"Current Running Tasks: {self.taskmgr.tasks.unfinished_tasks}")
-        print(f"Tasks marked for execution: {self.taskmgr.tasks.qsize()}")
-        print(f"Remaining Tasks: {self.taskmgr.all_tasks.unfinished_tasks}")
-
+        #Debug:
+        #print("---------------------- self.taskmgr.all_tasks.join() --------------------------------")
+        #print(f"Current Running Tasks: {self.taskmgr.tasks.unfinished_tasks}")
+        #print(f"Tasks marked for execution: {self.taskmgr.tasks.qsize()}")
+        #print(f"Remaining Tasks: {self.taskmgr.all_tasks.unfinished_tasks}")
 
         """ For some reason the self.taskmgr.tasks.join() does not work properly, hence doing it manually  """
-        execute = True
-        while execute:
-            running_threads = ""
-            for thread in threading.enumerate():
-                running_threads += thread.name + " | "
-
-            if "TASK-" in running_threads:
-                print(running_threads)
-                time.sleep(1)
-            else:
-                logger.info("No more tasks running!")
-                self.taskmgr.tasks.mutex.acquire()
-                self.taskmgr.tasks.queue.clear()
-                self.taskmgr.tasks.all_tasks_done.notify_all()
-                self.taskmgr.tasks.unfinished_tasks = 0
-                self.taskmgr.tasks.mutex.release()
-                self.taskmgr.complete = True
-                execute = False
-
-
+        self.taskmgr.wait_untill_processed(self.taskmgr.tasks)
         self.taskmgr.stop()
 
 
-
-    def print_results(self):
-
-        for item in self.results:
-            logger.error(item)
 
     def __init__(self, taskmgr, files):
 

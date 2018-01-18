@@ -74,6 +74,28 @@ class task_manager(object):
                         logger.debug("Tasks queue is empty...")
 
 
+    def wait_untill_processed(self, tasks_queue):
+
+        execute = True
+        while execute:
+            running_threads = ''
+            for thread in threading.enumerate():
+                running_threads += thread.name + ' | '
+
+            if 'TASK-' in running_threads:
+                #print(running_threads)
+                time.sleep(1)
+            else:
+                logger.info('No more tasks running!')
+                tasks_queue.mutex.acquire()
+                tasks_queue.queue.clear()
+                tasks_queue.all_tasks_done.notify_all()
+                tasks_queue.unfinished_tasks = 0
+                tasks_queue.mutex.release()
+                self.complete = True
+                execute = False
+
+
     def add_task(self, task):
         self.all_tasks.put_nowait(task)
 
