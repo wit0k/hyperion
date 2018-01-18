@@ -41,8 +41,7 @@ class fileagent(agent):
             handler = self.handlers_list[task_properties["file_type"]](file)
 
             if handler:
-                self.taskmgr.new_task(func_handler=handler.run, func_param=(None,), task_name="",
-                                         task_type=self.name, properties=task_properties)
+                self.taskmgr.new_task(func_handler=handler.run, task_name="", task_type=self.name, properties=task_properties)
 
 
         self.taskmgr.all_tasks.join()

@@ -149,7 +149,7 @@ class _task():
         if func_param:
             self.thread = threading.Thread(name=self.name, target=func_handler, args=(self, ) + func_param)
         else:
-            self.thread = threading.Thread(name=self.name, target=func_handler)
+            self.thread = threading.Thread(name=self.name, target=func_handler, args=(self, ))
 
 
     def get_output(self, output):
