@@ -1,5 +1,6 @@
 import logging
-import threading
+import time
+import hashlib
 import datetime
 from .core.agent import *
 from .handlers.rtf import *
@@ -30,18 +31,18 @@ class fileagent(agent):
         for file in self.files:
 
             """ Set task properties """
-            properties = {}
-            properties["file_path"] = file
-            properties["file_hash"] = self.md5(file)
-            properties["id"] = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M%S') + properties["file_hash"].upper()
-            properties["file_type"] = self.file_type(file)
+            task_properties = {}
+            task_properties["file_path"] = file
+            task_properties["file_hash"] = self.md5(file)
+            task_properties["id"] = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M%S') + task_properties["file_hash"].upper()
+            task_properties["file_type"] = self.file_type(file)
 
             """ Get the Handler """
-            handler = self.handlers_list[properties["file_type"]](file)
+            handler = self.handlers_list[task_properties["file_type"]](file)
 
             if handler:
-                self.taskmgr.new_task(func_handler=handler.run, func_param=(self.taskmgr.tasks,), task_name="",
-                                         task_type=self.name, properties=properties)
+                self.taskmgr.new_task(func_handler=handler.run, func_param=(None,), task_name="",
+                                         task_type=self.name, properties=task_properties)
 
 
         self.taskmgr.all_tasks.join()

@@ -55,6 +55,7 @@ class task_manager(object):
                 except Empty:
                     logger.debug("All tasks queue is empty...")
 
+            # Case where there are no remaining tasks and there are only executed/unfinished tasks
             elif self.tasks.unfinished_tasks > 0 and self.all_tasks.unfinished_tasks == 0 and self.tasks.qsize() == 0:
                 time.sleep(SYSTEM_TASK_SLEEP_TIME)
             else:
@@ -146,7 +147,7 @@ class _task():
             self.name = "TASK-" + self.id
 
         if func_param:
-            self.thread = threading.Thread(name=self.name, target=func_handler, args=func_param)
+            self.thread = threading.Thread(name=self.name, target=func_handler, args=(self, ) + func_param)
         else:
             self.thread = threading.Thread(name=self.name, target=func_handler)
 

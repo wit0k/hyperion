@@ -5,9 +5,6 @@
 import os.path
 import re
 import logging
-import time
-import random
-import hashlib
 
 from oletools import rtfobj, oleobj
 from ..core.yarascan import *
@@ -15,6 +12,15 @@ from ..core.yarascan import *
 logger = logging.getLogger('hyperion')
 
 class rtf():
+
+
+    def __init__(self, file):
+        """ Init the class object """
+        self.file = file
+        self.queue = None
+
+    def exit(self):
+        pass
 
     name = "rtf"
     obj_sig_len = 4
@@ -41,15 +47,7 @@ class rtf():
         ("Executable file name", re.compile(r"(?i)\b\w+\.(EXE|PIF|GADGET|MSI|MSP|MSC|VBS|VBE|VB|JSE|JS|WSF|WSC|WSH|WS|BAT|CMD|DLL|SCR|HTA|CPL|CLASS|JAR|PS1XML|PS1|PS2XML|PS2|PSC1|PSC2|SCF|LNK|INF|REG)\b"))
     )
 
-    def __init__(self, file):
-        """ Init the class object """
-        self.file = file
-        self.queue = None
-
-    def exit(self):
-        pass
-
-    def run(self, queue):
+    def run(self, task, param=None):
 
         meta_data = {}
         file = self.file  # need to adopt the code below, to remove this line
@@ -57,7 +55,6 @@ class rtf():
         output = []
 
         if _objects:
-            #logger.debug(f"Enumerating document objects: {file}")
             for offset, orig_len, data in _objects:
                 meta_data["filename"] = os.path.basename(file)
                 meta_data["obj_count"] = len(_objects)
@@ -99,14 +96,15 @@ class rtf():
                 meta_data.clear()
             #logger.debug(f"{len(_objects)} objects found in: {self.file}")
 
+            # Need to find out how to share the result with the caller...
             print(output[0]["filename"], output[0]["obj_offset"])
 
         else:
             logger.warning(f"Unsupported file: {file}")
 
         """ Properly close the task before returning from the function"""
-        queue.task_done()
-        logger.debug(f"Close Task: {file} -> Queue unfinished_tasks: {queue.unfinished_tasks}")
+        task.taskmgr.tasks.task_done()
+        logger.debug(f"Close Task: {file} -> Queue unfinished_tasks: {task.taskmgr.tasks.unfinished_tasks}")
 
 
     def regex_scan(self, strings):
