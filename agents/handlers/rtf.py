@@ -46,6 +46,9 @@ class rtf():
         self.file = file
         self.queue = None
 
+    def exit(self):
+        pass
+
     def run(self, queue):
 
         meta_data = {}
@@ -100,7 +103,8 @@ class rtf():
 
         else:
             logger.warning(f"Unsupported file: {file}")
-        
+
+        """ Properly close the task before returning from the function"""
         queue.task_done()
         logger.debug(f"Close Task: {file} -> Queue unfinished_tasks: {queue.unfinished_tasks}")
 
