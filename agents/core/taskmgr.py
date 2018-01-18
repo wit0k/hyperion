@@ -26,17 +26,16 @@ class task_manager(object):
         t_monitor_tasks_queue.daemon = True
         t_monitor_tasks_queue.start()
 
-        logger.info("Task Manager settings: {}")
+        logger.info("Task Manager settings:")
         logger.info(f"MONITOR_THREAD_NAME: {MONITOR_THREAD_NAME}")
         logger.info(f"MAX_SIMULTANEOUS_TASKS_COUNT: {MAX_SIMULTANEOUS_TASKS_COUNT}")
         logger.info(f"SYSTEM_TASK_SLEEP_TIME: {SYSTEM_TASK_SLEEP_TIME}")
-
 
     def monitor_tasks_queue(self):
         """ Daemon thread (TaskMgr.Tasks.Handler) handling queues:
             - Starts up to MAX_SIMULTANEOUS_TASKS_COUNT threads
          """
-        logger.info("Start monitoring the Task queue...")
+        logger.info("Monitoring tasks ...")
         while self.complete is False:
 
             # Handles initial state (before the queues get filled in)
@@ -65,43 +64,17 @@ class task_manager(object):
                 #print(f"Tasks marked for execution: {current_tasks_queue_size}")
                 #print(f"Remaining Tasks: {self.all_tasks.unfinished_tasks}")
 
-                for i in range(0, current_tasks_queue_size):
-                    try:
-                        task = self.tasks.get_nowait()
-                        logger.debug(f"Execute Task ID: {task.id} - File: {task.properties['file_path']}")
-                        task.run()
-                    except Empty:
-                        logger.debug("Tasks queue is empty...")
-
-
-    def wait_untill_processed(self, tasks_queue):
-
-        execute = True
-        while execute:
-            running_threads = ''
-            for thread in threading.enumerate():
-                running_threads += thread.name + ' | '
-
-            if 'TASK-' in running_threads:
-                #print(running_threads)
-                time.sleep(1)
-            else:
-                logger.info('No more tasks running!')
-                tasks_queue.mutex.acquire()
-                tasks_queue.queue.clear()
-                tasks_queue.all_tasks_done.notify_all()
-                tasks_queue.unfinished_tasks = 0
-                tasks_queue.mutex.release()
-                self.complete = True
-                execute = False
-
-
-    def add_task(self, task):
-        self.all_tasks.put_nowait(task)
+                try:
+                    task = self.tasks.get_nowait()
+                    logger.debug(f"Execute Task ID: {task.name} - File: {task.properties['file_path']}")
+                    task.run()
+                except Empty:
+                    #logger.debug("Tasks queue is empty...")
+                    pass
 
     def new_task(self, func_handler, func_param=(), task_name="", task_type="", properties={}):
         task = _task(self, func_handler, func_param, task_name, properties, task_type)
-        self.add_task(task)
+        self.all_tasks.put_nowait(task)
 
     def stop(self):
 
@@ -126,8 +99,29 @@ class task_manager(object):
                         execute = False
 
                 else:
-                    logger.info(f"{MONITOR_THREAD_NAME} - Exited successfuly")
+                    logger.info(f"{MONITOR_THREAD_NAME} - Exited successfully")
                     execute = False
+
+    def wait_untill_processed(self, tasks_queue):
+
+        execute = True
+        while execute:
+            running_threads = ''
+            for thread in threading.enumerate():
+                running_threads += thread.name + ' | '
+
+            if 'TASK-' in running_threads:
+                #print(running_threads)
+                time.sleep(SYSTEM_TASK_SLEEP_TIME)
+            else:
+                logger.info('No more tasks running!')
+                tasks_queue.mutex.acquire()
+                tasks_queue.queue.clear()
+                tasks_queue.all_tasks_done.notify_all()
+                tasks_queue.unfinished_tasks = 0
+                tasks_queue.mutex.release()
+                self.complete = True
+                execute = False
 
 
 class _task():

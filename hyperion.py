@@ -82,11 +82,13 @@ def main(argv):
     """ urlagent """
 
     """ fileagent """
-    logger.info(f"Looking for samples in: {args.file_path}")
+
     if os.path.isfile(args.file_path):
+        logger.info(f"Looking for: {args.file_path}")
         _fagent = fileagent(taskmgr, args.file_path)
         _fagent.process_files()
     else:
+        logger.info(f"Looking for samples in: {args.file_path}")
         files = []
         file_path = ""
         for file in os.listdir(args.file_path):
@@ -97,10 +99,6 @@ def main(argv):
 
         _fagent = fileagent(taskmgr, files)
         _fagent.process_files()
-
-        #_fagent.print_results()
-
-        test=""
 
 if __name__ == "__main__":
     main(sys.argv)
