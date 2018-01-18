@@ -73,8 +73,8 @@ class task_manager(object):
                     #logger.debug("Tasks queue is empty...")
                     pass
 
-    def new_task(self, func_handler, func_param=(), task_name="", task_type="", properties={}):
-        task = _task(self, func_handler, func_param, task_name, properties, task_type)
+    def new_task(self, handler, func_handler, func_param=(), task_name="", task_type="", properties={}):
+        task = _task(self, handler, func_handler, func_param, task_name, properties, task_type)
         self.all_tasks.put_nowait(task)
 
     def stop(self):
@@ -128,36 +128,37 @@ class task_manager(object):
 
 class _task():
 
-    def __init__(self, taskmgr, func_handler, func_param=(), task_name="", properties={}, task_type=""):
+    def __init__(self, taskmgr, handler, func_handler, func_param=(), task_name="", properties={}, task_type=""):
 
         self.taskmgr = taskmgr
         self.id = properties["id"]
         self.thread = None
         self.thread_id = None
-        self.handler = None
-        self.function_handler = None
+        self.handler = handler  # Allows setting properties of the handler (if needed)
+        self.function_handler = None  # Custom function handler (usually .run method of the handler)
         self.name = task_name
         self.type = task_type
         self.properties = properties
-        self.result = []
+        self.result = [] # Not sure if it is needed (Still need to find the best way to get the data back)
 
+        """ Set appropriate task name """
         if task_name:
+            # System task
             self.name = task_name
         else:
+            # Handler task
             self.name = "TASK-" + self.id
 
+        """ Build a new thread accordingly to function parameter (task object is always sent)"""
         if func_param:
             self.thread = threading.Thread(name=self.name, target=func_handler, args=(self, ) + func_param)
         else:
             self.thread = threading.Thread(name=self.name, target=func_handler, args=(self, ))
 
-
-    def get_output(self, output):
-        self.result = output
-
     def run(self):
         try:
             self.thread.start()
+            # Thread ID is available only after starting it
             self.thread_id = self.thread.ident
         except Exception:
             logger.error(Exception)
