@@ -29,6 +29,8 @@ class fileagent(agent):
     def process_files(self):
         """ Creates a task for each file with appropriate handler  """
 
+        loaded_scanners = {}
+
         logger.info(f"Processing [{len(self.files)}] files")
         for file in self.files:
 
@@ -40,7 +42,11 @@ class fileagent(agent):
             task_properties["file_type"] = self.file_type(file)
 
             """ Get the Scanner object """
-            task_properties["scanner"] = scanner(task_properties["file_type"])
+            try:
+                task_properties["scanner"] = loaded_scanners[task_properties["file_type"]]
+            except KeyError:
+                task_properties["scanner"] = scanner(task_properties["file_type"])
+                loaded_scanners[task_properties["file_type"]] = task_properties["scanner"]
 
             """ Get the Handler """
             handler = self.handlers_list[task_properties["file_type"]](file)

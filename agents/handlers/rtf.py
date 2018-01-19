@@ -17,7 +17,7 @@ class rtf():
 
     name = "rtf"
     obj_sig_len = 4
-    output_format = ["filename", "file_sig", "obj_count", "obj_offset", "ole_type", "ole_size", "obj_sig", "ole_yara_sig",
+    output_format = ["file_name", "file_sig", "obj_count", "obj_offset", "ole_type", "ole_size", "obj_sig", "ole_yara_sig",
                      "ole_regex_strings",
                      "ole_strings"]
 
@@ -50,13 +50,32 @@ class rtf():
         rtf_stripped = (re.sub(r"(?:\{\\\*\\keycode[0-9]+ {1})([0-9a-fA-F]+)\}", r"\1", rtf_data))
         return rtf_stripped
 
+    def _regex_scan(self, strings):
+        """
+        Taken from olevba:
+
+        Detect if the VBA code contains specific patterns such as IP addresses,
+        URLs, e-mail addresses, executable file names, etc.
+
+        :param vba_code: str, VBA source code
+        :return: list of str tuples (pattern type, value)
+        """
+        results = []
+        #found = set()
+        for pattern_type, pattern_re in self.RE_PATTERNS:
+            for match in pattern_re.finditer(strings):
+                value = match.group()
+                #if value not in found:
+                results.append(value)
+                    #found.add(value)
+        return results
 
     def run(self, task, param=None):
 
         meta_data = {}
         output = []
 
-        """ Retrieve objects """
+        """ Retrieve necessary objects """
         scan = task.properties["scanner"]
 
         """ Scan the file content """
@@ -74,7 +93,7 @@ class rtf():
 
         if _objects:
             for offset, orig_len, data in _objects:
-                meta_data["filename"] = os.path.basename(self.file)
+                meta_data["file_name"] = os.path.basename(self.file)
                 meta_data["obj_count"] = len(_objects)
                 meta_data["obj_size"] = len(data)
                 meta_data["obj_offset"] = '0x%08X' % offset
@@ -108,40 +127,23 @@ class rtf():
                 meta_data["ole_yara_sig"] = ole_yarasig
 
                 matched_strings = ""
-                matched_strings = self.regex_scan(unique_strings)
+                matched_strings = self._regex_scan(unique_strings)
                 meta_data["ole_regex_strings"] = matched_strings
 
                 output.append(meta_data.copy())
                 meta_data.clear()
 
             # Need to find out how to share the result with the caller...
-            print(output[0]["filename"], output[0]["obj_offset"], output[0]["ole_yara_sig"])
+            print(output[0]["file_name"], output[0]["obj_offset"], output[0]["file_sig"], output[0]["ole_yara_sig"])
 
         else:
-            logger.warning(f"Unsupported file: {file}")
+            logger.warning(f"Unsupported file: {self.file}")
 
         """ Properly close the task before returning from the function"""
-        task.task_done()
-        logger.debug(f"Close Task: {file} -> Queue unfinished_tasks: {task.taskmgr.tasks.unfinished_tasks}")
+        self.end(task)
+
+    def end(self, task_obj):
+        task_obj.task_done()
 
 
-    def regex_scan(self, strings):
-        """
-        Taken from olevba:
-
-        Detect if the VBA code contains specific patterns such as IP addresses,
-        URLs, e-mail addresses, executable file names, etc.
-
-        :param vba_code: str, VBA source code
-        :return: list of str tuples (pattern type, value)
-        """
-        results = []
-        #found = set()
-        for pattern_type, pattern_re in self.RE_PATTERNS:
-            for match in pattern_re.finditer(strings):
-                value = match.group()
-                #if value not in found:
-                results.append(value)
-                    #found.add(value)
-        return results
 

@@ -34,7 +34,7 @@ class scanner(object):
 
     def _compile_rules(self):
         if self.rules:
-            logger.debug("Compiling rules: \n {self.rules} \n")
+            logger.debug(f"Compiling rules: \n {self.rules} \n")
             return yara.compile(filepaths=self.rules)
         else:
             return None

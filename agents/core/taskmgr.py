@@ -129,7 +129,7 @@ class task_manager(object):
 class _task():
 
     def __init__(self, taskmgr, handler, func_handler, func_param=(), task_name="", properties={}, task_type=""):
-
+        self.file = properties["file_path"]
         self.taskmgr = taskmgr
         self.id = properties["id"]
         self.thread = None
@@ -166,6 +166,7 @@ class _task():
 
     def task_done(self):
         try:
+            logger.debug(f"Close Task: {self.file} -> Queue unfinished_tasks: {self.taskmgr.tasks.unfinished_tasks}")
             self.taskmgr.tasks.task_done()
         except ValueError:
             pass
