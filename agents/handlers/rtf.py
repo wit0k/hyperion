@@ -8,23 +8,17 @@ import logging
 
 from oletools import rtfobj, oleobj
 
+import yara
 
 logger = logging.getLogger('hyperion')
 
 class rtf():
 
 
-    def __init__(self, file):
-        """ Init the class object """
-        self.file = file
-        self.queue = None
-
-    def exit(self):
-        pass
-
     name = "rtf"
     obj_sig_len = 4
-    output_format = ["filename", "obj_count", "obj_offset", "ole_type", "ole_size", "obj_sig", "ole_yara_sig", "ole_regex_strings",
+    output_format = ["filename", "file_sig", "obj_count", "obj_offset", "ole_type", "ole_size", "obj_sig", "ole_yara_sig",
+                     "ole_regex_strings",
                      "ole_strings"]
 
     SCHEME = r'\b(?:http|ftp)s?'
@@ -44,19 +38,43 @@ class rtf():
         ('IPv4 address', re.compile(IPv4)),
         ('E-mail address', re.compile(r'(?i)\b[A-Z0-9._%+-]+@' + SERVER + '\b')),
         ('Domain name', re.compile(r'(?=^.{1,254}$)(^(?:(?!\d+\.|-)[a-zA-Z0-9_\-]{1,63}(?<!-)\.?)+(?:[a-zA-Z]{2,})$)')),
-        ("Executable file name", re.compile(r"(?i)\b\w+\.(EXE|PIF|GADGET|MSI|MSP|MSC|VBS|VBE|VB|JSE|JS|WSF|WSC|WSH|WS|BAT|CMD|DLL|SCR|HTA|CPL|CLASS|JAR|PS1XML|PS1|PS2XML|PS2|PSC1|PSC2|SCF|LNK|INF|REG)\b"))
+        ("Executable file name", re.compile(
+            r"(?i)\b\w+\.(EXE|PIF|GADGET|MSI|MSP|MSC|VBS|VBE|VB|JSE|JS|WSF|WSC|WSH|WS|BAT|CMD|DLL|SCR|HTA|CPL|CLASS|JAR|PS1XML|PS1|PS2XML|PS2|PSC1|PSC2|SCF|LNK|INF|REG)\b"))
     )
+
+    def __init__(self, file):
+        """ Init the class object """
+        self.file = file
+
+    def _strip_keycodes(self, rtf_data):
+        rtf_stripped = (re.sub(r"(?:\{\\\*\\keycode[0-9]+ {1})([0-9a-fA-F]+)\}", r"\1", rtf_data))
+        return rtf_stripped
+
 
     def run(self, task, param=None):
 
         meta_data = {}
-        file = self.file  # need to adopt the code below, to remove this line
-        _objects = list(rtfobj.rtf_iter_objects(self.file))
         output = []
+
+        """ Retrieve objects """
+        scan = task.properties["scanner"]
+
+        """ Scan the file content """
+        meta_data["file_sig"] = ""
+        with open(self.file, 'rb') as file_content:
+            file_buffer = file_content.read()
+            meta_data["file_sig"] = scan.scan_buffer(file_buffer)
+
+            # Scan stripped file content if previous match was not found
+            if not meta_data["file_sig"]:
+                file_buffer_stripped = self._strip_keycodes(file_buffer.decode("utf-8"))
+                meta_data["file_sig"] = scan.scan_buffer(file_buffer_stripped)
+
+        _objects = list(rtfobj.rtf_iter_objects(self.file))
 
         if _objects:
             for offset, orig_len, data in _objects:
-                meta_data["filename"] = os.path.basename(file)
+                meta_data["filename"] = os.path.basename(self.file)
                 meta_data["obj_count"] = len(_objects)
                 meta_data["obj_size"] = len(data)
                 meta_data["obj_offset"] = '0x%08X' % offset
@@ -79,11 +97,11 @@ class rtf():
 
                 meta_data["ole_strings"] = unique_strings
 
-                scan = task.properties["scanner"]
-
+                """ Scan the data object content """
                 ole_yarasig = ""
-                for sig in scan.scan_buffer(data):
-                    ole_yarasig += sig.rule + ","
+                #for sig in scan.scan_buffer(data):
+                ole_yarasig = scan.scan_buffer(data)
+
                 if ole_yarasig[-1:] == ",":
                     ole_yarasig = ole_yarasig[:-1]
 
@@ -95,7 +113,6 @@ class rtf():
 
                 output.append(meta_data.copy())
                 meta_data.clear()
-            #logger.debug(f"{len(_objects)} objects found in: {self.file}")
 
             # Need to find out how to share the result with the caller...
             print(output[0]["filename"], output[0]["obj_offset"], output[0]["ole_yara_sig"])

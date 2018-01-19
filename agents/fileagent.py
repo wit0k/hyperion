@@ -39,7 +39,6 @@ class fileagent(agent):
             task_properties["id"] = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M%S') + task_properties["file_hash"].upper()
             task_properties["file_type"] = self.file_type(file)
 
-
             """ Get the Scanner object """
             task_properties["scanner"] = scanner(task_properties["file_type"])
 

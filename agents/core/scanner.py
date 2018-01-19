@@ -11,7 +11,9 @@ all_rules = {
                     }
             }
 
+
 class scanner(object):
+
 
     def __init__(self, file_type):
         """ Initialise the rule sets accordingly, by file type """
@@ -43,4 +45,12 @@ class scanner(object):
         else:
             logger.error("Yara scanner not initialized")
             return None
+
+    def scan_file(self, file):
+        if self.scanner:
+            return self.scanner.match(file)
+        else:
+            logger.error("Yara scanner not initialized")
+            return None
+
 
