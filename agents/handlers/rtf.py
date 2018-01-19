@@ -7,7 +7,7 @@ import re
 import logging
 
 from oletools import rtfobj, oleobj
-from ..core.yarascan import *
+
 
 logger = logging.getLogger('hyperion')
 
@@ -79,9 +79,10 @@ class rtf():
 
                 meta_data["ole_strings"] = unique_strings
 
-                yscanner = yarascan("agents/rules/CVE-2017-11882.yr")
+                scan = task.properties["scanner"]
+
                 ole_yarasig = ""
-                for sig in yscanner.scan_buffer(data):
+                for sig in scan.scan_buffer(data):
                     ole_yarasig += sig.rule + ","
                 if ole_yarasig[-1:] == ",":
                     ole_yarasig = ole_yarasig[:-1]
@@ -97,13 +98,13 @@ class rtf():
             #logger.debug(f"{len(_objects)} objects found in: {self.file}")
 
             # Need to find out how to share the result with the caller...
-            print(output[0]["filename"], output[0]["obj_offset"])
+            print(output[0]["filename"], output[0]["obj_offset"], output[0]["ole_yara_sig"])
 
         else:
             logger.warning(f"Unsupported file: {file}")
 
         """ Properly close the task before returning from the function"""
-        task.taskmgr.tasks.task_done()
+        task.task_done()
         logger.debug(f"Close Task: {file} -> Queue unfinished_tasks: {task.taskmgr.tasks.unfinished_tasks}")
 
 

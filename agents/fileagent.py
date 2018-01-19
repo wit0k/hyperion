@@ -4,6 +4,8 @@ import hashlib
 import datetime
 from .core.agent import *
 from .handlers.rtf import *
+from .core.scanner import *
+
 logger = logging.getLogger('hyperion')
 
 class fileagent(agent):
@@ -37,6 +39,10 @@ class fileagent(agent):
             task_properties["id"] = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M%S') + task_properties["file_hash"].upper()
             task_properties["file_type"] = self.file_type(file)
 
+
+            """ Get the Scanner object """
+            task_properties["scanner"] = scanner(task_properties["file_type"])
+
             """ Get the Handler """
             handler = self.handlers_list[task_properties["file_type"]](file)
 
@@ -44,12 +50,6 @@ class fileagent(agent):
                 self.taskmgr.new_task(handler=handler, func_handler=handler.run, task_name="", task_type=self.name, properties=task_properties)
 
         self.taskmgr.all_tasks.join()
-
-        #Debug:
-        #print("---------------------- self.taskmgr.all_tasks.join() --------------------------------")
-        #print(f"Current Running Tasks: {self.taskmgr.tasks.unfinished_tasks}")
-        #print(f"Tasks marked for execution: {self.taskmgr.tasks.qsize()}")
-        #print(f"Remaining Tasks: {self.taskmgr.all_tasks.unfinished_tasks}")
 
         """ For some reason the self.taskmgr.tasks.join() does not work properly, hence doing it manually  """
         self.taskmgr.wait_untill_processed(self.taskmgr.tasks)

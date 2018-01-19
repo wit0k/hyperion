@@ -164,4 +164,10 @@ class _task():
             logger.error(Exception)
             return None
 
+    def task_done(self):
+        try:
+            self.taskmgr.tasks.task_done()
+        except ValueError:
+            pass
+
 
