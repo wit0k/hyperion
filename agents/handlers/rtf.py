@@ -21,6 +21,7 @@ class rtf():
                      "ole_regex_strings",
                      "ole_strings"]
 
+
     SCHEME = r'\b(?:http|ftp)s?'
     TLD = r'(?:xn--[a-zA-Z0-9]{4,20}|[a-zA-Z]{2,20})'
     DNS_NAME = r'(?:[a-zA-Z0-9\-\.]+\.' + TLD + ')'
@@ -46,34 +47,13 @@ class rtf():
         """ Init the class object """
         self.file = file
 
-    def _strip_keycodes(self, rtf_data):
-        rtf_stripped = (re.sub(r"(?:\{\\\*\\keycode[0-9]+ {1})([0-9a-fA-F]+)\}", r"\1", rtf_data))
-        return rtf_stripped
-
-    def _regex_scan(self, strings):
-        """
-        Taken from olevba:
-
-        Detect if the VBA code contains specific patterns such as IP addresses,
-        URLs, e-mail addresses, executable file names, etc.
-
-        :param vba_code: str, VBA source code
-        :return: list of str tuples (pattern type, value)
-        """
-        results = []
-        #found = set()
-        for pattern_type, pattern_re in self.RE_PATTERNS:
-            for match in pattern_re.finditer(strings):
-                value = match.group()
-                #if value not in found:
-                results.append(value)
-                    #found.add(value)
-        return results
-
+    """ Main module functions """
     def run(self, task, param=None):
 
         meta_data = {}
         output = []
+        file_buffer = ""
+        file_buffer_stripped = ""
 
         """ Retrieve necessary objects """
         scan = task.properties["scanner"]
@@ -86,9 +66,16 @@ class rtf():
 
             # Scan stripped file content if previous match was not found
             if not meta_data["file_sig"]:
-                file_buffer_stripped = self._strip_keycodes(file_buffer.decode("utf-8"))
+                file_buffer_stripped = self._strip_keycodes(file_buffer.decode("utf8"))
                 meta_data["file_sig"] = scan.scan_buffer(file_buffer_stripped)
 
+        """ ... """
+
+        handler = self._get_handler(meta_data["file_sig"])
+        if handler:
+            handler(file_buffer_stripped, meta_data)
+
+        """ Get info about all objects available """
         _objects = list(rtfobj.rtf_iter_objects(self.file))
 
         if _objects:
@@ -120,10 +107,6 @@ class rtf():
                 ole_yarasig = ""
                 #for sig in scan.scan_buffer(data):
                 ole_yarasig = scan.scan_buffer(data)
-
-                if ole_yarasig[-1:] == ",":
-                    ole_yarasig = ole_yarasig[:-1]
-
                 meta_data["ole_yara_sig"] = ole_yarasig
 
                 matched_strings = ""
@@ -134,7 +117,7 @@ class rtf():
                 meta_data.clear()
 
             # Need to find out how to share the result with the caller...
-            print(output[0]["file_name"], output[0]["obj_offset"], output[0]["file_sig"], output[0]["ole_yara_sig"])
+            print(output[0]["file_name"], output[0]["obj_offset"], output[0]["file_sig"], output[0]["ole_yara_sig"], output[0]["ole_regex_strings"])
 
         else:
             logger.warning(f"Unsupported file: {self.file}")
@@ -144,6 +127,48 @@ class rtf():
 
     def end(self, task_obj):
         task_obj.task_done()
+
+    """ CVE specific handlers """
+    def _CVE_2018_0802(self, rtf_stripped, meta_data):
+        return None
+
+    mappings_yara_to_handler = {
+        'rtf_CVE_2018_0802_v1': _CVE_2018_0802
+    }
+
+    def _get_handler(self, yara_sig_name):
+        """ For unknown reason not working yet, even if yara_sig_name match the dict key... ? """
+        try:
+            return self.mappings_yara_to_handler[yara_sig_name]
+        except KeyError:
+            return None
+
+    """ Helper functions """
+    def _strip_keycodes(self, rtf_data):
+        rtf_stripped = (re.sub(r"(?:\{\\\*\\keycode[0-9]+ {1})([0-9a-fA-F]+)\}", r"\1", rtf_data))
+        return rtf_stripped
+
+    def _regex_scan(self, strings):
+        """
+        Taken from olevba:
+
+        Detect if the VBA code contains specific patterns such as IP addresses,
+        URLs, e-mail addresses, executable file names, etc.
+
+        :param vba_code: str, VBA source code
+        :return: list of str tuples (pattern type, value)
+        """
+        results = []
+        #found = set()
+        for pattern_type, pattern_re in self.RE_PATTERNS:
+            for match in pattern_re.finditer(strings):
+                value = match.group()
+                #if value not in found:
+                results.append(value)
+                    #found.add(value)
+        return results
+
+
 
 
 

@@ -34,14 +34,20 @@ class scanner(object):
 
     def _compile_rules(self):
         if self.rules:
-            logger.debug(f"Compiling rules: \n {self.rules} \n")
+            logger.debug(f"Compiling rules: \n {self.rules}")
             return yara.compile(filepaths=self.rules)
         else:
             return None
 
     def scan_buffer(self, buffer):
         if self.scanner:
-            return self.scanner.match(data=buffer)
+            result_match = self.scanner.match(data=buffer)
+            if result_match:
+                str_result = ""
+                for item in result_match:
+                    str_result += str(item) + " "
+                return str_result
+
         else:
             logger.error("Yara scanner not initialized")
             return None

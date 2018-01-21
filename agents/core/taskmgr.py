@@ -140,7 +140,7 @@ class _task():
         self.type = task_type
         self.properties = properties
         self.result = [] # Not sure if it is needed (Still need to find the best way to get the data back)
-
+        self.ioc = {}
         """ Set appropriate task name """
         if task_name:
             # System task
