@@ -60,7 +60,8 @@ class fileagent(agent):
         self.taskmgr.wait_untill_processed(self.taskmgr.tasks)
         self.taskmgr.stop()
 
-
+    def print_results(self):
+        self.taskmgr.print_results()
 
     def __init__(self, taskmgr, files):
 

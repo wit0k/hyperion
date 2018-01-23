@@ -14,6 +14,7 @@ class task_manager(object):
 
     tasks = Queue(maxsize=MAX_SIMULTANEOUS_TASKS_COUNT)
     all_tasks = Queue()
+    results = Queue()
 
     def __init__(self):
 
@@ -125,6 +126,16 @@ class task_manager(object):
                 self.complete = True
                 execute = False
 
+    def print_results(self):
+        execute = True
+        while execute:
+            try:
+                print(self.results.get_nowait())
+                self.results.task_done()
+            except Exception:
+                execute = False
+                logger.debug("End printing. Nothing in the queue ...")
+
 
 class _task():
 
@@ -139,7 +150,6 @@ class _task():
         self.name = task_name
         self.type = task_type
         self.properties = properties
-        self.result = [] # Not sure if it is needed (Still need to find the best way to get the data back)
         self.ioc = {}
         """ Set appropriate task name """
         if task_name:
@@ -164,11 +174,14 @@ class _task():
             logger.error(Exception)
             return None
 
-    def task_done(self):
+    def task_done(self, result):
         try:
             logger.debug(f"Close Task: {self.file} -> Queue unfinished_tasks: {self.taskmgr.tasks.unfinished_tasks}")
+            if result:
+                self.taskmgr.results.put(result)
             self.taskmgr.tasks.task_done()
         except ValueError:
             pass
+
 
 
