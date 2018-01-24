@@ -76,8 +76,8 @@ class task_manager(object):
                     #logger.debug("Tasks queue is empty...")
                     pass
 
-    def new_task(self, file, file_type, handler, func_handler, func_param=(), task_name="", task_type="", properties={}):
-        task = _task(self, file, file_type, handler, func_handler, func_param, task_name, properties, task_type)
+    def new_task(self, file, file_type, handler, func_handler, func_param=(), task_name="", task_type="", scanner=None):
+        task = _task(self, file, file_type, handler, func_handler, func_param, task_name, scanner, task_type)
         self.all_tasks.put_nowait(task)
 
     def stop(self):
@@ -147,7 +147,24 @@ class task_manager(object):
 
 class _task():
 
-    def __init__(self, taskmgr, file, file_type, handler, func_handler, func_param=(), task_name="", properties={}, task_type=""):
+    result_format = {
+
+        "task_info": {
+            "type": "",
+            "name": "",
+            "id": "",
+            "thread_id": ""
+
+        },
+        "data_format": {
+            "field_names": []
+        },
+        "task_output": {
+            "data": []
+        }
+    }
+
+    def __init__(self, taskmgr, file, file_type, handler, func_handler, func_param=(), task_name="", scanner=None, task_type=""):
 
         self.file = file
         self.file_type = file_type
@@ -156,7 +173,7 @@ class _task():
         self.type = task_type
         self.name = task_name
         self.id = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M%S-') + self.file_hash.upper()
-
+        self.scanner = scanner
         """ Set appropriate task name """
         if task_name:
             # System task
@@ -170,7 +187,6 @@ class _task():
         self.handler = handler  # Allows further manipulation of handler's properties (if needed)
         self.function_handler = None  # Custom function handler (usually .run method of the handler)
 
-        self.properties = properties
         self.ioc = {}
 
         """ Fill-in task specific properties by task type """
@@ -200,6 +216,7 @@ class _task():
             self.taskmgr.tasks.task_done()
         except ValueError:
             pass
+
 
 
 

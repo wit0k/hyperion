@@ -86,8 +86,8 @@ def main(argv):
     if os.path.isfile(args.file_path):
         logger.info(f"Looking for: {args.file_path}")
         _fagent = fileagent(taskmgr, args.file_path)
-        _fagent.process_files()
-        _fagent.print_results()
+        _fagent.execute()
+        _fagent.print()
         test = ""
     else:
         logger.info(f"Looking for samples in: {args.file_path}")
@@ -100,8 +100,8 @@ def main(argv):
                 file_path = ""
 
         _fagent = fileagent(taskmgr, files)
-        _fagent.process_files()
-        _fagent.print_results()
+        _fagent.execute()
+        _fagent.print()
         test = ""
 
 if __name__ == "__main__":

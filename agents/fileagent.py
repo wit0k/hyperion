@@ -3,7 +3,7 @@ import time
 
 from .core.agent import *
 from .handlers.rtf import *
-from .core.scanner import *
+from .core.yara_scanner import *
 
 logger = logging.getLogger('hyperion')
 
@@ -18,7 +18,7 @@ class fileagent(agent):
         "rtf": rtf
     }
 
-    def process_files(self):
+    def execute(self):
         """ Creates a task for each file with appropriate handler  """
 
         loaded_scanners = {}
@@ -27,25 +27,20 @@ class fileagent(agent):
         for file in self.files:
 
             """ Set task properties """
-            task_properties = {}
-            #task_properties["file_path"] = file
-            #task_properties["file_hash"] = self.md5(file)
-            #task_properties["id"] = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M%S') + task_properties["file_hash"].upper()
-            task_properties["file_type"] = self.file_type(file)
+            file_type = self.file_type(file)
 
-            """ Get the Scanner object (if not loaded, initialize it and save it """
-            try:
-                task_properties["scanner"] = loaded_scanners[task_properties["file_type"]]
-            except KeyError:
-                task_properties["scanner"] = scanner(task_properties["file_type"])
-                loaded_scanners[task_properties["file_type"]] = task_properties["scanner"]
+            if file_type in loaded_scanners.keys():
+                _scanner = loaded_scanners[file_type]
+            else:
+                _scanner = yara_scanner(file_type)
+                loaded_scanners[file_type] = _scanner
 
             """ Get the Handler """
-            handler = self.handlers_list[task_properties["file_type"]](file)
+            handler = self.handlers_list[file_type](file)
 
             if handler:
-                self.taskmgr.new_task(file=file, file_type=self.file_type(file), handler=handler, func_handler=handler.run, task_name="",
-                                      task_type="file", properties=task_properties)
+                self.taskmgr.new_task(file=file, file_type=file_type, handler=handler, func_handler=handler.run, task_name="",
+                                      task_type="file", scanner=_scanner)
 
         self.taskmgr.all_tasks.join()
 
@@ -53,7 +48,7 @@ class fileagent(agent):
         self.taskmgr.wait_untill_processed(self.taskmgr.tasks)
         self.taskmgr.stop()
 
-    def print_results(self):
+    def print(self):
         self.taskmgr.print_results()
 
     def __init__(self, taskmgr, files):

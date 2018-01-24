@@ -51,28 +51,23 @@ class rtf():
     """ Main module functions """
     def run(self, task, param=None):
 
+        """ Initialize handler variables """
         meta_data = collections.OrderedDict()
         output = []
         file_buffer = ""
         file_buffer_stripped = ""
 
-        """ Update the meta_data with task properties information """
-        #task.properties[""]
-
-        """ Retrieve necessary objects """
-        scan = task.properties["scanner"]
-
         """ Scan the file content """
         meta_data["file_sig"] = ""
         with open(self.file, 'rb') as file_content:
             file_buffer = file_content.read()
-            meta_data["file_sig"] = scan.scan_buffer(file_buffer)
+            meta_data["file_sig"] = task.scanner.scan_buffer(file_buffer)
 
             # Scan stripped file content if previous match was not found
             if not meta_data["file_sig"]:
                 try:
                     file_buffer_stripped = self._strip_keycodes(file_buffer.decode("utf8"))
-                    meta_data["file_sig"] = scan.scan_buffer(file_buffer_stripped)
+                    meta_data["file_sig"] = task.scanner.scan_buffer(file_buffer_stripped)
                 except UnicodeDecodeError:
                     logger.warning(f"UnicodeDecodeError: Failed to decode -> {self.file}")
 
@@ -114,8 +109,7 @@ class rtf():
 
                 """ Scan the data object content """
                 ole_yarasig = ""
-                #for sig in scan.scan_buffer(data):
-                ole_yarasig = scan.scan_buffer(data)
+                ole_yarasig = task.scanner.scan_buffer(data)
                 meta_data["ole_yara_sig"] = ole_yarasig
 
                 matched_strings = ""
