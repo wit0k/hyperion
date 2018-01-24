@@ -56,6 +56,9 @@ class rtf():
         file_buffer = ""
         file_buffer_stripped = ""
 
+        """ Update the meta_data with task properties information """
+        #task.properties[""]
+
         """ Retrieve necessary objects """
         scan = task.properties["scanner"]
 

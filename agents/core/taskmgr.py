@@ -3,6 +3,8 @@ import logging
 from queue import Queue, Empty
 logger = logging.getLogger('hyperion')
 import time
+import datetime
+import hashlib
 
 logger = logging.getLogger('hyperion')
 MONITOR_THREAD_NAME = "TaskMgr.Tasks.Handler"
@@ -68,14 +70,14 @@ class task_manager(object):
 
                 try:
                     task = self.tasks.get_nowait()
-                    logger.debug(f"Execute Task ID: {task.name} - File: {task.properties['file_path']}")
+                    logger.debug(f"Execute Task ID: {task.name} - File: {task.file}")
                     task.run()
                 except Empty:
                     #logger.debug("Tasks queue is empty...")
                     pass
 
-    def new_task(self, handler, func_handler, func_param=(), task_name="", task_type="", properties={}):
-        task = _task(self, handler, func_handler, func_param, task_name, properties, task_type)
+    def new_task(self, file, file_type, handler, func_handler, func_param=(), task_name="", task_type="", properties={}):
+        task = _task(self, file, file_type, handler, func_handler, func_param, task_name, properties, task_type)
         self.all_tasks.put_nowait(task)
 
     def stop(self):
@@ -136,21 +138,25 @@ class task_manager(object):
                 execute = False
                 logger.debug("End printing. Nothing in the queue ...")
 
+    def _md5(self, fname):
+        hash_md5 = hashlib.md5()
+        with open(fname, "rb") as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                hash_md5.update(chunk)
+        return hash_md5.hexdigest()
 
 class _task():
 
-    def __init__(self, taskmgr, handler, func_handler, func_param=(), task_name="", properties={}, task_type=""):
-        self.file = properties["file_path"]
+    def __init__(self, taskmgr, file, file_type, handler, func_handler, func_param=(), task_name="", properties={}, task_type=""):
+
+        self.file = file
+        self.file_type = file_type
         self.taskmgr = taskmgr
-        self.id = properties["id"]
-        self.thread = None
-        self.thread_id = None
-        self.handler = handler  # Allows setting properties of the handler (if needed)
-        self.function_handler = None  # Custom function handler (usually .run method of the handler)
-        self.name = task_name
+        self.file_hash = self.taskmgr._md5(self.file)
         self.type = task_type
-        self.properties = properties
-        self.ioc = {}
+        self.name = task_name
+        self.id = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M%S-') + self.file_hash.upper()
+
         """ Set appropriate task name """
         if task_name:
             # System task
@@ -158,6 +164,18 @@ class _task():
         else:
             # Handler task
             self.name = "TASK-" + self.id
+
+        self.thread = None
+        self.thread_id = None
+        self.handler = handler  # Allows further manipulation of handler's properties (if needed)
+        self.function_handler = None  # Custom function handler (usually .run method of the handler)
+
+        self.properties = properties
+        self.ioc = {}
+
+        """ Fill-in task specific properties by task type """
+        if self.type == "file":
+            pass
 
         """ Build a new thread accordingly to function parameter (task object is always sent)"""
         if func_param:

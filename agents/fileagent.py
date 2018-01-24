@@ -1,7 +1,6 @@
 import logging
 import time
-import hashlib
-import datetime
+
 from .core.agent import *
 from .handlers.rtf import *
 from .core.scanner import *
@@ -14,13 +13,6 @@ class fileagent(agent):
 
     def file_type(self, file):
         return "rtf"
-
-    def md5(self, fname):
-        hash_md5 = hashlib.md5()
-        with open(fname, "rb") as f:
-            for chunk in iter(lambda: f.read(4096), b""):
-                hash_md5.update(chunk)
-        return hash_md5.hexdigest()
 
     handlers_list = {
         "rtf": rtf
@@ -36,9 +28,9 @@ class fileagent(agent):
 
             """ Set task properties """
             task_properties = {}
-            task_properties["file_path"] = file
-            task_properties["file_hash"] = self.md5(file)
-            task_properties["id"] = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M%S') + task_properties["file_hash"].upper()
+            #task_properties["file_path"] = file
+            #task_properties["file_hash"] = self.md5(file)
+            #task_properties["id"] = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M%S') + task_properties["file_hash"].upper()
             task_properties["file_type"] = self.file_type(file)
 
             """ Get the Scanner object (if not loaded, initialize it and save it """
@@ -52,7 +44,8 @@ class fileagent(agent):
             handler = self.handlers_list[task_properties["file_type"]](file)
 
             if handler:
-                self.taskmgr.new_task(handler=handler, func_handler=handler.run, task_name="", task_type=self.name, properties=task_properties)
+                self.taskmgr.new_task(file=file, file_type=self.file_type(file), handler=handler, func_handler=handler.run, task_name="",
+                                      task_type="file", properties=task_properties)
 
         self.taskmgr.all_tasks.join()
 
