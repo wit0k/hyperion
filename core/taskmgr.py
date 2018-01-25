@@ -63,11 +63,6 @@ class task_manager(object):
                 time.sleep(SYSTEM_TASK_SLEEP_TIME)
             else:
                 """ Execute the tasks """
-                current_tasks_queue_size = self.tasks.qsize()
-                #print(f"Current Running Tasks: {self.tasks.unfinished_tasks}")
-                #print(f"Tasks marked for execution: {current_tasks_queue_size}")
-                #print(f"Remaining Tasks: {self.all_tasks.unfinished_tasks}")
-
                 try:
                     task = self.tasks.get_nowait()
                     logger.debug(f"Execute Task ID: {task.name} - File: {task.file}")
@@ -81,7 +76,7 @@ class task_manager(object):
         self.all_tasks.put_nowait(task)
 
     def stop(self):
-
+        """ Stops the Task Manager gracefully """
         execute = True
         self.complete = True
         logger.info(f"Stopping {MONITOR_THREAD_NAME} ...")
@@ -108,6 +103,10 @@ class task_manager(object):
                     execute = False
 
     def wait_untill_processed(self, tasks_queue):
+        """ Manual implementation of .join on the task_queue """
+
+        logger.debug(f"Waiting for Task threads to finish ...")
+        time.sleep(MAX_SIMULTANEOUS_TASKS_COUNT)
 
         execute = True
         while execute:
@@ -138,6 +137,7 @@ class task_manager(object):
                 execute = False
                 logger.debug("End printing. Nothing in the queue ...")
 
+    # Helper function, will be soon moved to Core
     def _md5(self, fname):
         hash_md5 = hashlib.md5()
         with open(fname, "rb") as f:
