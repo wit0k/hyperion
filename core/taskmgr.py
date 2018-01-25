@@ -1,5 +1,6 @@
 import threading
 import logging
+import os
 from queue import Queue, Empty
 logger = logging.getLogger('hyperion')
 import time
@@ -167,6 +168,7 @@ class _task():
     def __init__(self, taskmgr, file, file_type, handler, func_handler, func_param=(), task_name="", scanner=None, task_type=""):
 
         self.file = file
+        self.file_path = os.path.basename(self.file)
         self.file_type = file_type
         self.taskmgr = taskmgr
         self.file_hash = self.taskmgr._md5(self.file)

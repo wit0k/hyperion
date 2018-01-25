@@ -52,13 +52,14 @@ class rtf():
     def run(self, task, param=None):
 
         """ Initialize handler variables """
+        task_info = collections.OrderedDict()
         meta_data = collections.OrderedDict()
         output = []
         file_buffer = ""
         file_buffer_stripped = ""
 
         """ Scan the file content """
-        meta_data["file_sig"] = ""
+        task_info["file_sig"] = ""
         with open(self.file, 'rb') as file_content:
             file_buffer = file_content.read()
             meta_data["file_sig"] = task.scanner.scan_buffer(file_buffer)
@@ -82,13 +83,13 @@ class rtf():
         """ Get info about all objects available """
         _objects = list(rtfobj.rtf_iter_objects(self.file))
 
+        task_info["obj_count"] = len(_objects)
+
         if _objects:
             for offset, orig_len, data in _objects:
-                meta_data["file_name"] = os.path.basename(self.file)
-                meta_data["obj_count"] = len(_objects)
-                meta_data["obj_size"] = len(data)
+                #meta_data["file_name"] = os.path.basename(self.file)
+                #meta_data["obj_count"] = len(_objects)
                 meta_data["obj_offset"] = '0x%08X' % offset
-                meta_data["obj_sig"] = str(data[:self.obj_sig_len])
                 try:
                     _oleobj = oleobj.OleObject()
                     _oleobj.parse(data)
@@ -97,6 +98,9 @@ class rtf():
                 except Exception:
                     meta_data["ole_type"] = ""
                     meta_data["ole_size"] = ""
+
+                meta_data["obj_size"] = len(data)
+                meta_data["obj_sig"] = str(data[:self.obj_sig_len])
 
                 try:
                     unique_strings = ""
@@ -126,7 +130,8 @@ class rtf():
             logger.warning(f"Unsupported file: {self.file}")
 
         """ Properly close the task before returning from the function"""
-        self.end(task, output)
+
+        self.end(task,  output)
 
     def end(self, task_obj, output):
         task_obj.task_done(output)
