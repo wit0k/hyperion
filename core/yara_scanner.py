@@ -6,8 +6,8 @@ logger = logging.getLogger('hyperion')
 
 all_rules = {
                 "rtf": {
-                    '1':'/repos/hyperion/agents/rules/CVE-2017-11882.yr',
-                    '2':'/repos/hyperion/agents/rules/CVE-2018-0802.yr'
+                    '1':'/repos/hyperion/rules/CVE-2017-11882.yr',
+                    '2':'/repos/hyperion/rules/CVE-2018-0802.yr'
                     }
             }
 

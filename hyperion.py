@@ -1,7 +1,7 @@
 import logging
 import sys
 import argparse
-from agents.core.taskmgr import task_manager
+from core.taskmgr import task_manager
 
 from agents.fileagent import *
 

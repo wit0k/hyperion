@@ -1,10 +1,10 @@
 import logging
 import time
 
-from .core.agent import *
-from .handlers.rtf import *
-from .core.yara_scanner import *
-from .core.file_type import *
+from core.agent import *
+from handlers.rtf import *
+from core.yara_scanner import *
+from core.file_type import *
 
 logger = logging.getLogger('hyperion')
 
