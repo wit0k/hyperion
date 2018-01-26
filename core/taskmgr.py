@@ -148,23 +148,6 @@ class task_manager(object):
 
 class _task():
 
-    result_format = {
-
-        "task_info": {
-            "type": "",
-            "name": "",
-            "id": "",
-            "thread_id": ""
-
-        },
-        "data_format": {
-            "field_names": []
-        },
-        "task_output": {
-            "data": []
-        }
-    }
-
     def __init__(self, taskmgr, file, file_type, handler, func_handler, func_param=(), task_name="", scanner=None, task_type=""):
 
         self.file = file
@@ -210,15 +193,57 @@ class _task():
             logger.error(Exception)
             return None
 
-    def task_done(self, result):
+    def task_done(self, task_result):
         try:
             logger.debug(f"Close Task: {self.file} -> Queue unfinished_tasks: {self.taskmgr.tasks.unfinished_tasks}")
-            if result:
-                self.taskmgr.results.put(result)
+            if task_result:
+
+                """ Convert to result object """
+                _result = result(self.thread_id, self.id, self.name, self.type, task_result)
+
+                self.taskmgr.results.put(task_result)
             self.taskmgr.tasks.task_done()
         except ValueError:
             pass
 
 
+class result(object):
 
+    def __init__(self, thread_id, task_id, task_name, task_type, task_data):
+
+        self.type = None
+
+        if task_type:
+            if task_type == "file":
+                self.type = task_type
+                self.info = file_info(thread_id, task_id, task_name)
+                self.data = _data(task_data)
+                self.ioc = file_ioc(task_data)
+
+        test = ""
+
+class file_info(object):
+
+    def __init__(self, thread_id, task_id, task_name):
+        self.task_name = task_name
+        self.task_id = task_id
+        self.thread_id = thread_id
+        self.meta_data = None
+
+class _data():
+
+    def __init__(self, task_data):
+        self.items = task_data
+
+
+class file_ioc():
+    def __init__(self, data):
+
+        self.ip = []
+        self.url = []
+        self.email = []
+        self.domain = []
+        self.exe_name = []
+        self.btc = []
+        self.file_path = []
 

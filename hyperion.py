@@ -67,6 +67,10 @@ def main(argv):
     script_args.add_argument("-f", "--file", type=str, action='store', dest='file_path', required=False,
                              help="File or folder path for samples")
 
+    script_args.add_argument("--ioc", type=str, action='store', dest='print_ioc_only', required=False,
+                             help="Would print the IOCs only")
+
+
     args = argsparser.parse_args()
     argc = argv.__len__()
 

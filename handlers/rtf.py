@@ -41,7 +41,7 @@ class rtf():
         'domain': re.compile(r'(?=^.{1,254}$)(^(?:(?!\d+\.|-)[a-zA-Z0-9_\-]{1,63}(?<!-)\.?)+(?:[a-zA-Z]{2,})$)'),
         "exe_name": re.compile(r"(?i)\b\w+\.(EXE|PIF|GADGET|MSI|MSP|MSC|VBS|VBE|VB|JSE|JS|WSF|WSC|WSH|WS|BAT|CMD|DLL|SCR|HTA|CPL|CLASS|JAR|PS1XML|PS1|PS2XML|PS2|PSC1|PSC2|SCF|LNK|INF|REG)\b"),
         'btc': re.compile(r'\b[13][a-km-zA-HJ-NP-Z1-9]{25,34}\b'),
-        'file_path_win': re.compile(r'((?:(?:[A-Za-z]:)|//home)[^\.]+\.[A-Za-z]{2,8})')
+        'file_path': re.compile(r'((?:(?:[A-Za-z]:)|//home)[^\.]+\.[A-Za-z]{2,8})')
     }
 
     def __init__(self, file):
@@ -62,23 +62,23 @@ class rtf():
         task_info["file_sig"] = ""
         with open(self.file, 'rb') as file_content:
             file_buffer = file_content.read()
-            meta_data["file_sig"] = task.scanner.scan_buffer(file_buffer)
+            task_info["file_sig"] = task.scanner.scan_buffer(file_buffer)
 
             # Scan stripped file content if previous match was not found
-            if not meta_data["file_sig"]:
+            if not task_info["file_sig"]:
                 try:
                     file_buffer_stripped = self._strip_keycodes(file_buffer.decode("utf8"))
-                    meta_data["file_sig"] = task.scanner.scan_buffer(file_buffer_stripped)
+                    task_info["file_sig"] = task.scanner.scan_buffer(file_buffer_stripped)
                 except UnicodeDecodeError:
                     logger.warning(f"UnicodeDecodeError: Failed to decode -> {self.file}")
 
         """ Get the right handler by file_sig """
-        handler = self._get_handler(meta_data["file_sig"])
+        handler = self._get_handler(task_info["file_sig"])
         if handler:
             if file_buffer_stripped:
-                handler(self, file_buffer_stripped, meta_data)
+                handler(self, file_buffer_stripped, task_info)
             else:
-                handler(self, file_buffer, meta_data)
+                handler(self, file_buffer, task_info)
 
         """ Get info about all objects available """
         _objects = list(rtfobj.rtf_iter_objects(self.file))
@@ -87,8 +87,6 @@ class rtf():
 
         if _objects:
             for offset, orig_len, data in _objects:
-                #meta_data["file_name"] = os.path.basename(self.file)
-                #meta_data["obj_count"] = len(_objects)
                 meta_data["obj_offset"] = '0x%08X' % offset
                 try:
                     _oleobj = oleobj.OleObject()
@@ -123,15 +121,14 @@ class rtf():
                 output.append(meta_data.copy())
                 meta_data.clear()
 
-                # Need to find out how to share the result with the caller...
-                #print(output[0]["file_name"], output[0]["obj_offset"], output[0]["file_sig"], output[0]["ole_yara_sig"], output[0]["ole_regex_strings"])
-
         else:
             logger.warning(f"Unsupported file: {self.file}")
 
         """ Properly close the task before returning from the function"""
 
-        self.end(task,  output)
+        task_info["data"] = output
+
+        self.end(task,  task_info)
 
     def end(self, task_obj, output):
         task_obj.task_done(output)
