@@ -11,7 +11,7 @@ class file_type(object):
 
     file_types = {
         "Apple Desktop Services Store": None,
-        "Rich Text Format data, version 1, ANSI": "rtf"
+        "Rich Text Format data": "rtf"
     }
 
     def __init__(self, file_path, GetMIMEType=False):
@@ -27,7 +27,12 @@ class file_type(object):
         file_type = obj_magic.from_file(file_path)
         if file_type:
             try:
-                self.type = self.file_types[file_type]
+                #self.type = self.file_types[file_type]
+
+                for key, f_type in self.file_types.items():
+                    if key in file_type:
+                        self.type = f_type
+                        break
             except KeyError:
                 self.type = None
         else:

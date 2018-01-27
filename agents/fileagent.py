@@ -4,7 +4,9 @@ import time
 from core.agent import *
 from handlers.rtf import *
 from core.yara_scanner import *
+from core.regex_scanner import *
 from core.file_type import *
+
 
 logger = logging.getLogger('hyperion')
 
@@ -26,24 +28,31 @@ class fileagent(agent):
         loaded_scanners = {}
 
         logger.info(f"Processing [{len(self.files)}] files")
+
+
         for file in self.files:
 
             """ Set task properties """
             file_type = self.file_type(file)
 
+            """ Load appropriate scanners """
             if file_type:
                 if file_type in loaded_scanners.keys():
-                    _scanner = loaded_scanners[file_type]
+                    """ Scanners already initialized """
+                    pass
                 else:
-                    _scanner = yara_scanner(file_type)
-                    loaded_scanners[file_type] = _scanner
+                    """ Yara """
+                    yr_scanner = yara_scanner(file_type)
+                    """ Regex """
+                    rg_scanner = regex_scanner(file_type)
+                    loaded_scanners[file_type] = {"regex": rg_scanner, "yara": yr_scanner}
 
                 """ Get the Handler """
                 handler = self.handlers_list[file_type](file)
 
                 if handler:
                     self.taskmgr.new_task(file=file, file_type=file_type, handler=handler, func_handler=handler.run, task_name="",
-                                          task_type="file", scanner=_scanner)
+                                          task_type="file", scanner=loaded_scanners[file_type])
             else:
                 logger.warning(f"Unsupported file type. File: '{file}'")
 

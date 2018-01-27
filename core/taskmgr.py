@@ -148,7 +148,7 @@ class task_manager(object):
 
 class _task():
 
-    def __init__(self, taskmgr, file, file_type, handler, func_handler, func_param=(), task_name="", scanner=None, task_type=""):
+    def __init__(self, taskmgr, file, file_type, handler, func_handler, func_param=(), task_name="", scanner={}, task_type=""):
 
         self.file = file
         self.file_path = os.path.basename(self.file)

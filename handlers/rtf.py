@@ -12,37 +12,10 @@ logger = logging.getLogger('hyperion')
 
 class rtf():
 
-
     name = "rtf"
     obj_sig_len = 4
     output_format = ["file_name", "file_sig", "obj_count", "obj_offset", "ole_type", "ole_size", "obj_sig", "ole_yara_sig",
-                     "ole_regex_strings",
-                     "ole_strings"]
-
-    SCHEME = r'\b(?:http|ftp)s?'
-    TLD = r'(?:xn--[a-zA-Z0-9]{4,20}|[a-zA-Z]{2,20})'
-    DNS_NAME = r'(?:[a-zA-Z0-9\-\.]+\.' + TLD + ')'
-    NUMBER_0_255 = r'(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]|[0-9])'
-    IPv4 = r'(?:' + NUMBER_0_255 + r'\.){3}' + NUMBER_0_255
-    SERVER = r'(?:' + IPv4 + '|' + DNS_NAME + ')'
-    PORT = r'(?:\:[0-9]{1,5})?'
-    SERVER_PORT = SERVER + PORT
-    URL_PATH = r'(?:/[a-zA-Z0-9\-\._\?\,\'/\\\+&%\$#\=~]*)?'  # [^\.\,\)\(\s"]
-    URL_RE = SCHEME + r'\://' + SERVER_PORT + URL_PATH
-    re_url = re.compile(URL_RE)
-
-    RE_PATTERNS = {
-        'url_v1': re.compile(URL_RE),
-        'url_v2': re.compile(r'[a-zA-Z]+://[-a-zA-Z0-9.]+(?:/[-a-zA-Z0-9+&@#/%=~_|!:,.;]*)?(?:\?[a-zA-Z0-9+&@#/%=~_|!:,.;]*)?'),
-        'ipv4_v1': re.compile(IPv4),
-        'ipv4_v2': re.compile(r'\b(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\b'),
-        'email_v1': re.compile(r'(?i)\b[A-Z0-9._%+-]+@' + SERVER + '\b'),
-        'email_v2': re.compile(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}'),
-        'domain': re.compile(r'(?=^.{1,254}$)(^(?:(?!\d+\.|-)[a-zA-Z0-9_\-]{1,63}(?<!-)\.?)+(?:[a-zA-Z]{2,})$)'),
-        "exe_name": re.compile(r"(?i)\b\w+\.(EXE|PIF|GADGET|MSI|MSP|MSC|VBS|VBE|VB|JSE|JS|WSF|WSC|WSH|WS|BAT|CMD|DLL|SCR|HTA|CPL|CLASS|JAR|PS1XML|PS1|PS2XML|PS2|PSC1|PSC2|SCF|LNK|INF|REG)\b"),
-        'btc': re.compile(r'\b[13][a-km-zA-HJ-NP-Z1-9]{25,34}\b'),
-        'file_path': re.compile(r'((?:(?:[A-Za-z]:)|//home)[^\.]+\.[A-Za-z]{2,8})')
-    }
+                     "ole_regex_strings", "ole_strings"]
 
     def __init__(self, file):
         """ Init the class object """
@@ -51,54 +24,55 @@ class rtf():
     """ Main module functions """
     def run(self, task, param=None):
 
-        """ Initialize handler variables """
-        task_info = collections.OrderedDict()
-        meta_data = collections.OrderedDict()
+        """ Initialize variables """
+        task_data = collections.OrderedDict()
+        _object = collections.OrderedDict()
         output = []
         file_buffer = ""
         file_buffer_stripped = ""
+        handler = None
 
         """ Scan the file content """
-        task_info["file_sig"] = ""
+        task_data["file_sig"] = ""
         with open(self.file, 'rb') as file_content:
             file_buffer = file_content.read()
-            task_info["file_sig"] = task.scanner.scan_buffer(file_buffer)
+            task_data["file_sig"] = task.scanner["yara"].scan_buffer(file_buffer)
 
             # Scan stripped file content if previous match was not found
-            if not task_info["file_sig"]:
+            if not task_data["file_sig"]:
                 try:
                     file_buffer_stripped = self._strip_keycodes(file_buffer.decode("utf8"))
-                    task_info["file_sig"] = task.scanner.scan_buffer(file_buffer_stripped)
+                    task_data["file_sig"] = task.scanner["yara"].scan_buffer(file_buffer_stripped)
                 except UnicodeDecodeError:
                     logger.warning(f"UnicodeDecodeError: Failed to decode -> {self.file}")
 
         """ Get the right handler by file_sig """
-        handler = self._get_handler(task_info["file_sig"])
+        handler = self._get_handler(task_data["file_sig"])
         if handler:
             if file_buffer_stripped:
-                handler(self, file_buffer_stripped, task_info)
+                handler(self, file_buffer_stripped, task_data)
             else:
-                handler(self, file_buffer, task_info)
+                handler(self, file_buffer, task_data)
 
         """ Get info about all objects available """
         _objects = list(rtfobj.rtf_iter_objects(self.file))
 
-        task_info["obj_count"] = len(_objects)
+        task_data["obj_count"] = len(_objects)
 
         if _objects:
             for offset, orig_len, data in _objects:
-                meta_data["obj_offset"] = '0x%08X' % offset
+                _object["obj_offset"] = '0x%08X' % offset
                 try:
                     _oleobj = oleobj.OleObject()
                     _oleobj.parse(data)
-                    meta_data["ole_type"] = _oleobj.class_name
-                    meta_data["ole_size"] = _oleobj.data_size
+                    _object["ole_type"] = _oleobj.class_name
+                    _object["ole_size"] = _oleobj.data_size
                 except Exception:
-                    meta_data["ole_type"] = ""
-                    meta_data["ole_size"] = ""
+                    _object["ole_type"] = ""
+                    _object["ole_size"] = ""
 
-                meta_data["obj_size"] = len(data)
-                meta_data["obj_sig"] = str(data[:self.obj_sig_len])
+                _object["obj_size"] = len(data)
+                _object["obj_sig"] = str(data[:self.obj_sig_len])
 
                 try:
                     unique_strings = ""
@@ -107,28 +81,27 @@ class rtf():
                 except Exception:
                     unique_strings = ""
 
-                meta_data["ole_strings"] = unique_strings
+                _object["ole_strings"] = unique_strings
 
                 """ Scan the data object content """
                 ole_yarasig = ""
-                ole_yarasig = task.scanner.scan_buffer(data)
-                meta_data["ole_yara_sig"] = ole_yarasig
+                ole_yarasig = task.scanner["yara"].scan_buffer(data)
+                _object["ole_yara_sig"] = ole_yarasig
 
                 matched_strings = ""
-                matched_strings = self._regex_scan(unique_strings)
-                meta_data["ole_regex_strings"] = matched_strings
+                matched_strings = task.scanner["regex"].ioc_scan(unique_strings)
+                _object["ole_regex_strings"] = matched_strings
 
-                output.append(meta_data.copy())
-                meta_data.clear()
+                output.append(_object.copy())
+                _object.clear()
 
         else:
-            logger.warning(f"Unsupported file: {self.file}")
+            logger.warning(f"No objects found. File: {self.file}")
 
         """ Properly close the task before returning from the function"""
+        task_data["objects"] = output
+        self.end(task,  task_data)
 
-        task_info["data"] = output
-
-        self.end(task,  task_info)
 
     def end(self, task_obj, output):
         task_obj.task_done(output)
@@ -157,20 +130,6 @@ class rtf():
     def _strip_keycodes(self, rtf_data):
         rtf_stripped = (re.sub(r"(?:\{\\\*\\keycode[0-9]+ {1})([0-9a-fA-F]+)\}", r"\1", rtf_data))
         return rtf_stripped
-
-    def _regex_scan(self, strings):
-
-        """ Taken from olevba: """
-
-        results = []
-        found = set()
-        for pattern_type, pattern_re in self.RE_PATTERNS.items():
-            for match in pattern_re.finditer(strings):
-                value = match.group()
-                if value not in found:
-                    results.append(value)
-                    found.add(value)
-        return results
 
 
 
