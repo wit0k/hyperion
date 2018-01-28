@@ -59,7 +59,11 @@ class rtf():
         _objects = list(rtfobj.rtf_iter_objects(self.file))
 
         task_data["obj_count"] = len(_objects)
-        task_data["body_ioc"] = task.scanner["regex"].ioc_scan(file_buffer.decode("utf8"))
+        task_data["body_ioc_strings"] = task.scanner["regex"].ioc_scan(file_buffer.decode("utf8"))
+
+        """ Update Task's IOCs """
+        task.update_ioc(task_data["body_ioc_strings"])
+
         task_data["body_text"] = self._striprtf(file_buffer.decode("utf8"))
 
         if _objects:
@@ -68,7 +72,7 @@ class rtf():
                 try:
                     _oleobj = oleobj.OleObject()
                     _oleobj.parse(data)
-                    _object["ole_type"] = _oleobj.class_name
+                    _object["ole_type"] = str(_oleobj.class_name)
                     _object["ole_size"] = _oleobj.data_size
                 except Exception:
                     _object["ole_type"] = ""
@@ -94,6 +98,9 @@ class rtf():
                 matched_strings = ""
                 matched_strings = task.scanner["regex"].ioc_scan(unique_strings)
                 _object["ole_regex_strings"] = matched_strings
+
+                """ Update Task's IOCs """
+                task.update_ioc(_object["ole_regex_strings"])
 
                 output.append(_object.copy())
                 _object.clear()

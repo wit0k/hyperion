@@ -159,6 +159,8 @@ class _task():
         self.name = task_name
         self.id = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M%S-') + self.file_hash.upper()
         self.scanner = scanner
+        self.ioc = []
+
         """ Set appropriate task name """
         if task_name:
             # System task
@@ -171,8 +173,6 @@ class _task():
         self.thread_id = None
         self.handler = handler  # Allows further manipulation of handler's properties (if needed)
         self.function_handler = None  # Custom function handler (usually .run method of the handler)
-
-        self.ioc = {}
 
         """ Fill-in task specific properties by task type """
         if self.type == "file":
@@ -198,46 +198,75 @@ class _task():
             logger.debug(f"Close Task: {self.file} -> Queue unfinished_tasks: {self.taskmgr.tasks.unfinished_tasks}")
             if task_result:
 
-                """ Convert to result object """
-                _result = result(self.thread_id, self.id, self.name, self.type, task_result)
+                """ Convert to result dict to result object """
+                if self.type == "file":
+                    _result = result(self, task_result)
 
-                self.taskmgr.results.put(task_result)
+                if _result:
+                    self.taskmgr.results.put(task_result)  # apped to result
             self.taskmgr.tasks.task_done()
         except ValueError:
             pass
 
+    def update_ioc(self, values=[]):
+
+        if values:
+            if isinstance(values, list):
+                for _value in values:
+                    if isinstance(_value, dict):
+                        if _value not in self.ioc:
+                            self.ioc.append(_value)
+                    else:
+                        t = ""
 
 class result(object):
 
-    def __init__(self, thread_id, task_id, task_name, task_type, task_data):
+    def __init__(self, task, task_data):
 
         self.type = None
 
-        if task_type:
-            if task_type == "file":
-                self.type = task_type
-                self.info = file_info(thread_id, task_id, task_name)
-                self.data = _data(task_data)
-                self.ioc = file_ioc(task_data)
+        if task.type:
+            if task.type == "file":
+                self.type = task.type
+                self.info = file_info(task)
+                self.data = file_data(task_data)
+                self.ioc = file_ioc(task)
 
         test = ""
 
 class file_info(object):
 
-    def __init__(self, thread_id, task_id, task_name):
-        self.task_name = task_name
-        self.task_id = task_id
-        self.thread_id = thread_id
-        self.meta_data = None
+    def __init__(self, task):
+        self.sample = task.file
+        self.hash = task.file_hash
+        self.type = task.file_type
+        self.task_name = task.name
+        self.task_id = task.id
+        self.thread_id = task.thread_id
 
-class _data():
+class file_data():
 
     def __init__(self, task_data):
-        self.items = task_data
 
+        self.items = {}
+
+        for field, value in task_data.items():
+            if 'objects' == field:
+                self.objects = task_data['objects']
+            else:
+                try:
+                    self.items[field] = task_data[field]
+                except Exception:
+                    test = ""
 
 class file_ioc():
-    def __init__(self, data):
+
+    def update_list(self, list, item):
+
+        if item not in list:
+            list.append(item)
+
+    def __init__(self, task):
 
         self.ip = []
         self.url = []
@@ -247,3 +276,25 @@ class file_ioc():
         self.btc = []
         self.file_path = []
 
+        for _item in task.ioc:
+
+            test = _item
+
+            for _ioc_type, value in _item.items():
+
+                if "ip" in _ioc_type:
+                    self.update_list(self.ip, value)
+                elif "url" in _ioc_type:
+                    self.update_list(self.url, value)
+                elif "email" in _ioc_type:
+                    self.update_list(self.email, value)
+                elif "domain" in _ioc_type:
+                    self.update_list(self.domain, value)
+                elif "exe_name" in _ioc_type:
+                    self.update_list(self.exe_name, value)
+                elif "btc" in _ioc_type:
+                    self.update_list(self.btc, value)
+                elif "file_path" in _ioc_type:
+                    self.update_list(self.file_path, value)
+                else:
+                    logger.warning(f"Unsupported IOC type: {_ioc_type}: {value}")

@@ -30,17 +30,17 @@ class regex_scanner(object):
             "exe_name": re.compile(
                 r"(?i)\b\w+\.(EXE|PIF|GADGET|MSI|MSP|MSC|VBS|VBE|VB|JSE|JS|WSF|WSC|WSH|WS|BAT|CMD|DLL|SCR|HTA|CPL|CLASS|JAR|PS1XML|PS1|PS2XML|PS2|PSC1|PSC2|SCF|LNK|INF|REG)\b"),
             'btc': re.compile(r'\b[13][a-km-zA-HJ-NP-Z1-9]{25,34}\b'),
-            'file_path': re.compile(r'((?:(?:[A-Za-z]:)|//home)[^\.]+\.[A-Za-z]{2,8})')
+            'file_path': re.compile(r'((?:(?:[A-Za-z]:)|\/home|(%[A-Za-z]+%\\))[^\.]+\.[A-Za-z]{2,8})')
         }
 
     def ioc_scan(self, strings):
 
         results = []
-        found = set()
+        found = []
         for pattern_type, pattern_re in self.RE_PATTERNS.items():
             for match in pattern_re.finditer(strings):
                 value = match.group()
                 if value not in found:
-                    results.append(value)
-                    found.add(value)
+                    results.append({pattern_type: value})
+                    found.append({pattern_type: value})
         return results
